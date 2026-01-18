@@ -1,0 +1,1240 @@
+
+\section{PROBLEM 1 - Cài đặt chính sách lập lịch FIFO}
+
+\subsection{Giới thiệu}
+$\indent$Trong hệ thống đa nhiệm, bộ lập lịch (scheduler) là thành phần quyết định việc phân phối tài nguyên xử lý cho các tác vụ đang chờ. Mặc dù BK~TaskPool đã cung cấp cơ chế tạo worker, truyền tín hiệu và thực thi nhiệm vụ, chức năng lựa chọn worker vẫn được để trống nhằm giúp sinh viên tự hiện thực. Problem~1 yêu cầu xây dựng chính sách lập lịch \textbf{FIFO (First-In, First-Out)} – một thuật toán cơ bản nhưng giữ vai trò quan trọng trong việc đảm bảo tính công bằng và tính dự đoán của hệ thống. 
+
+Việc triển khai FIFO giúp sinh viên hiểu rõ cách scheduler theo dõi trạng thái worker, cách dispatcher tương tác với worker thông qua tín hiệu, cũng như cách hệ thống duy trì tiến trình xử lý tác vụ theo đúng thứ tự yêu cầu.
+
+\subsection{Yêu cầu của bài toán}
+\begin{itemize}
+    \item Xây dựng nội dung hàm \texttt{bkwrk\_get\_worker()} để lựa chọn worker theo đúng nguyên tắc FIFO.
+    \item FIFO phải đảm bảo rằng worker được chọn là \textbf{worker rảnh đầu tiên} theo thứ tự tăng dần ID.
+    \item Worker chỉ được xem là sẵn sàng khi \texttt{wrkid\_busy[i] == 0}.
+    \item Scheduler phải trả về ID hợp lệ để dispatcher gửi tín hiệu kích hoạt đúng worker.
+    \item Khi worker hoàn tất nhiệm vụ, worker phải tự đánh dấu trạng thái rảnh để chuẩn bị nhận nhiệm vụ tiếp theo.
+\end{itemize}
+
+\subsection{Cách thức hiện thực}
+
+$\indent$Trong Problem 1, hệ thống cần xây dựng cơ chế lập lịch FIFO nhằm phân phối tác vụ cho các worker trong BK~TaskPool. 
+Việc hiện thực được tổ chức xoay quanh mô hình \textit{worker-thread} kết hợp cơ chế đồng bộ hóa bằng tín hiệu 
+(\textit{signal-based synchronization}).
+
+Kiến trúc tổng thể bao gồm bốn mô-đun chính: 
+(1) khởi tạo worker pool, 
+(2) vòng lặp xử lý của worker, 
+(3) ánh xạ tác vụ vào worker, và 
+(4) thuật toán lựa chọn worker theo FIFO. 
+Các thành phần này phối hợp với nhau để hình thành một pipeline xử lý tác vụ nhẹ, ổn định và hiệu quả.
+
+\subsubsection*{1. Khởi tạo worker pool bằng \texttt{clone()}}
+$\indent$Worker pool được tạo trong hàm \texttt{bkwrk\_create\_worker()}, sử dụng system call 
+\texttt{clone()} để sinh ra nhiều worker hoạt động song song. 
+Mỗi worker được cấu hình với các đặc điểm sau:
+
+\begin{itemize}
+    \item Stack độc lập, đảm bảo không gian thực thi riêng.
+    \item Chung không gian địa chỉ thông qua cờ \texttt{CLONE\_VM}, giúp việc chia sẻ thông tin giữa các worker 
+    và thread cha diễn ra tức thời.
+    \item Chung bộ mô tả file nhờ cờ \texttt{CLONE\_FILES}, hỗ trợ in ấn và giao tiếp hệ thống đơn giản.
+    \item Nhận worker ID thông qua tham số truyền vào khi gọi \texttt{clone()}.
+\end{itemize}
+
+Sau khi khởi tạo, worker được thiết lập về trạng thái \texttt{IDLE} và trở thành một phần của 
+\textit{lightweight thread pool}. 
+Cách tiếp cận này cho phép nhiều worker sẵn sàng xử lý tác vụ mà không tiêu tốn tài nguyên dư thừa.
+
+\subsubsection*{2. Vòng lặp xử lý tác vụ trong worker}
+
+$\indent$Hàm \texttt{bkwrk\_worker()} định nghĩa vòng đời của mỗi worker. Worker hoạt động theo hai pha chính: 
+\textbf{pha chờ tín hiệu} và \textbf{pha xử lý tác vụ}.
+
+\paragraph*{A - Chờ tín hiệu:}~
+
+Worker block tại lệnh:
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    sigwait(&set, &sig);
+\end{lstlisting}
+
+
+Ưu điểm của cơ chế này:
+\begin{itemize}
+    \item Worker hoàn toàn không tiêu tốn CPU khi không có nhiệm vụ.
+    \item Worker chỉ được đánh thức khi nhận tín hiệu \texttt{SIGUSR1} từ dispatcher.
+    \item Signal masking đảm bảo đồng bộ hóa tuyệt đối, tránh race condition.
+\end{itemize}
+
+\paragraph*{B - Thực thi tác vụ:}~
+
+Khi nhận tín hiệu đánh thức:
+
+\begin{itemize}
+    \item Worker lấy hàm thực thi và tham số từ \texttt{worker[i].func} và \texttt{worker[i].arg}.
+    \item Thực hiện tác vụ bằng lời gọi:
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    wrk->func(wrk->arg);
+\end{lstlisting}
+    \item Sau khi hoàn thành:
+          \begin{itemize}
+              \item Đặt lại trạng thái về \texttt{IDLE} (\texttt{wrkid\_busy[i] = 0}),
+              \item Xóa sạch thông tin task để tránh xử lý lặp lại.
+          \end{itemize}
+\end{itemize}
+
+\subsubsection*{3. Ánh xạ tác vụ vào worker}
+
+$\indent$Việc gán tác vụ được thực hiện trong hàm \texttt{bktask\_assign\_worker()}, bao gồm:
+
+\begin{itemize}
+    \item Truy xuất thông tin tác vụ từ task pool thông qua \texttt{bktask\_get\_byid()}.
+    \item Sao chép hàm thực thi và tham số vào cấu trúc worker.
+    \item Đánh dấu worker sang trạng thái \texttt{BUSY}.
+\end{itemize}
+
+Nhờ chia sẻ bộ nhớ (\texttt{CLONE\_VM}), quá trình ánh xạ chỉ là thao tác ghi trực tiếp, 
+nhanh và không yêu cầu cơ chế IPC.
+
+\subsubsection*{4. Kích hoạt worker bằng tín hiệu hệ thống}
+
+$\indent$Sau khi tác vụ được gán, worker được đánh thức bằng cách gọi:
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+     syscall(SYS_tkill, tid, SIG_DISPATCH);
+\end{lstlisting}
+
+Lợi ích của dispatch bằng tín hiệu:
+\begin{itemize}
+    \item Worker được đánh thức đúng thời điểm và đúng nhiệm vụ.
+    \item Không sử dụng busy-waiting, giảm tiêu thụ CPU.
+    \item Worker thoát khỏi \texttt{sigwait()} một cách an toàn và chính xác.
+\end{itemize}
+
+\subsubsection*{5. Cơ chế lập lịch FIFO – Trọng tâm của Problem 1}
+
+$\indent$Thuật toán FIFO được hiện thực trong hàm:
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    for (int i = 0; i < MAX_WORKER; i++)
+        if (wrkid_busy[i] == 0)
+            return i;
+\end{lstlisting}
+
+Đây là một cài đặt tinh gọn và chính xác của \textit{FIFO Worker Scheduling}, đặc trưng bởi:
+
+\begin{itemize}
+    \item Duyệt worker theo thứ tự ID tăng dần.
+    \item Worker trở về trạng thái \texttt{IDLE} sớm nhất sẽ được ưu tiên phục vụ task tiếp theo.
+    \item Tránh hoàn toàn hiện tượng starvation.
+    \item Phù hợp với worker pool đồng nhất.
+\end{itemize}
+
+\subsubsection*{6. Luồng thực thi tổng thể của Problem 1}
+
+$\indent$Quá trình xử lý tác vụ trong hệ thống diễn ra theo pipeline:
+
+\begin{enumerate}
+    \item \textbf{Main} khởi tạo task và worker pool.
+    \item \textbf{Scheduler} (FIFO) tìm worker rảnh đầu tiên.
+    \item \textbf{Assignment}: Task được ánh xạ vào worker.
+    \item \textbf{Dispatch}: Gửi tín hiệu đánh thức worker.
+    \item \textbf{Worker thực thi}:
+          \begin{itemize}
+              \item Worker wake từ \texttt{sigwait()},
+              \item Thực hiện hàm tác vụ,
+              \item Đặt lại trạng thái về \texttt{IDLE}.
+          \end{itemize}
+    \item Scheduler tiếp tục phân phối task tiếp theo.
+\end{enumerate}
+
+
+\subsection{Output đầu ra}
+
+$\indent$Khi thực thi chương trình:
+\begin{verbatim}
+    ./mypool
+\end{verbatim}
+
+
+\noindent Hệ thống khởi tạo BK TaskPool theo mô hình \textbf{worker–thread} sử dụng
+\texttt{clone()}, kết hợp cơ chế đồng bộ dựa trên tín hiệu (\texttt{sigwait()} và
+\texttt{tkill()}). Các dòng output phản ánh chính xác pipeline thực thi mà mã nguồn
+đã cài đặt.
+
+\newpage
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=16cm]{image/1.png}
+    \vspace{0.5cm}
+    \caption{Kết quả thực thi Problem 1 (Worker scheduling bằng clone() – Thread Mode)}
+\end{figure}
+
+
+\subsection*{Phân tích quá trình chạy và giải thích Output - Problem 1}
+
+
+\subsubsection*{1. Tạo worker - \texttt{clone()} sinh 10 worker thread và đưa vào trạng thái chờ}
+
+$\indent$Ngay khi chương trình khởi động, hệ thống in ra:
+
+\begin{verbatim}
+                        bkwrk_create_worker got worker 586
+                        bkwrk_create_worker got worker 587
+                        bkwrk_create_worker got worker 588
+                        bkwrk_create_worker got worker 589
+                        bkwrk_create_worker got worker 590
+                        bkwrk_create_worker got worker 591
+                        bkwrk_create_worker got worker 592
+                        bkwrk_create_worker got worker 593
+                        bkwrk_create_worker got worker 594
+                        bkwrk_create_worker got worker 595
+\end{verbatim}
+
+\noindent Các dòng này xuất phát từ hàm \texttt{bkwrk\_create\_worker()} tại thời điểm mỗi
+worker được tạo bằng:
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    clone(bkwrk_worker, stack_top,
+          CLONE_VM | CLONE_FILES,
+          &worker_ids[i]);
+\end{lstlisting}
+
+\newpage
+\textbf{Ý nghĩa kỹ thuật:}
+\begin{itemize}
+    \item Mỗi worker là một thread độc lập có stack riêng.
+    \item Tất cả worker chia sẻ chung không gian bộ nhớ với master (nhờ \texttt{CLONE\_VM}).
+    \item Worker chuyển ngay vào \texttt{bkwrk\_worker()} và block tại \texttt{sigwait()}, không tiêu tốn CPU khi không có tác vụ.
+\end{itemize}
+
+\noindent
+\textbf{Kết quả:} Worker pool gồm 10 thread ở trạng thái \textbf{IDLE}, sẵn sàng nhận nhiệm vụ.
+
+\subsubsection*{2. Gán tác vụ đầu tiên - FIFO chọn worker 0}
+
+$\indent$Output:
+\begin{verbatim}
+                        Assign tsk 0 wrk 0
+\end{verbatim}
+
+
+\noindent Đây là kết quả của thuật toán FIFO:
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    for (i = 0; i < MAX_WORKER; i++)
+        if (wrkid_busy[i] == 0)
+            return i;
+\end{lstlisting}
+
+\noindent \textbf{Worker 0} là worker rảnh đầu tiên nên được chọn.
+Master gán task bằng cách ghi trực tiếp vào bộ nhớ dùng chung:
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    worker[0].func = tsk->func;
+    worker[0].arg  = tsk->arg;
+    wrkid_busy[0]  = 1;
+\end{lstlisting}
+
+\noindent
+\textbf{Không cần IPC}: toàn bộ truyền thông chỉ là thao tác ghi bộ nhớ, cực nhanh và không tạo overhead.
+
+\subsubsection*{3. Dispatch - master gửi tín hiệu đánh thức worker 0}
+
+$\indent$Master đánh thức worker bằng:
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    syscall(SYS_tkill, tid, SIGUSR1);
+\end{lstlisting}
+Worker thoát khỏi \texttt{sigwait()} và in ra:
+
+\begin{verbatim}
+                        worker wake 0 up
+                        Task func - Hello from 1
+\end{verbatim}
+
+\textbf{Ý nghĩa:}
+\begin{itemize}
+    \item Worker nhận đúng tín hiệu được gửi từ master.
+    \item Worker đọc thông tin tác vụ từ cấu trúc worker.
+    \item Tiến hành thực thi hàm tác vụ.
+    \item Sau khi hoàn thành, đặt trạng thái về IDLE.
+\end{itemize}
+
+\subsubsection*{4. Scheduling bất đồng bộ - master tiếp tục lập lịch song song}
+
+$\indent$Output tiếp theo:
+
+\begin{verbatim}
+                Assign tsk 1 wrk 0 >>>>>>>>>> Activate asynchronously
+                Assign tsk 2 wrk 1 >>>>>>>>>> Activate asynchronously
+\end{verbatim}
+
+Điều này phản ánh đúng logic của hệ thống:
+
+\begin{itemize}
+    \item Task 1: tiếp tục được xếp cho worker 0, nhưng chỉ thực thi khi worker 0 rảnh.
+    \item Task 2: được gán cho worker 1 vì worker 1 là worker rảnh kế tiếp theo FIFO.
+\end{itemize}
+
+Dòng ``\texttt{Activate asynchronously}'' cho biết master \textbf{vẫn lập lịch trong khi worker đang chạy}, thể hiện cơ chế \textbf{asynchronous scheduling} của mô hình thread.
+
+\subsubsection*{5. Worker quay lại vòng lặp - tiếp tục xử lý tác vụ kế tiếp}
+
+$\indent$Sau khi hoàn thành tác vụ và trở về \texttt{sigwait()}, các worker được kích hoạt:
+
+\begin{verbatim}
+                            worker wake 0 up
+                            Task func - Hello from 2
+                            worker wake 1 up
+                            Task func - Hello from 5
+\end{verbatim}
+
+Chu trình hoạt động lặp lại đúng thiết kế:
+
+\begin{enumerate}
+    \item Worker block trong \texttt{sigwait()}.
+    \item Master gán task và gửi tín hiệu.
+    \item Worker đọc func/arg và thực thi.
+    \item Worker đặt trạng thái về IDLE.
+    \item Worker quay lại \texttt{sigwait()} chờ nhiệm vụ mới.
+\end{enumerate}
+
+
+
+
+% ------------------------------------------------------------------
+
+\newpage
+
+\section{PROBLEM 2 - Chuyển đổi worker sang tiến trình (fork)}
+
+\subsection{Giới thiệu}
+$\indent$Trong phiên bản mặc định của BK~TaskPool, mỗi worker được khởi tạo dưới dạng một thread thông qua \texttt{clone()} hoặc \texttt{pthread\_create()}. Mặc dù mô hình thread rất nhẹ và thuận tiện, mô hình tiến trình (process) lại mang tính tách biệt mạnh mẽ hơn, giúp sinh viên hiểu sâu hơn về cơ chế quản lý bộ nhớ, PID độc lập và tín hiệu liên tiến trình. Problem~2 yêu cầu triển khai lại worker bằng cách sử dụng \texttt{fork()}, từ đó tạo ra mỗi worker như một tiến trình độc lập.
+
+Việc áp dụng \texttt{fork()} giúp người học cảm nhận rõ ràng hơn sự khác biệt giữa thread và process, cũng như cách hệ điều hành thực hiện điều phối và gửi tín hiệu trong môi trường đa tiến trình.
+
+\subsection{Yêu cầu của bài toán}
+\begin{itemize}
+    \item Viết lại hàm tạo worker trong mục 3.1.1 sao cho mỗi worker được tạo bằng \texttt{fork()}.
+    \item Mỗi worker là một \textbf{tiến trình riêng biệt}, hoạt động độc lập với PID của chính nó.
+    \item Worker phải duy trì vòng lặp chờ tín hiệu (\texttt{sigwait}) và xử lý nhiệm vụ tương tự như phiên bản dùng thread.
+    \item Cơ chế dispatch phải gửi tín hiệu đến đúng PID bằng \texttt{kill(pid, SIG\_DISPATCH)}.
+    \item Worker phải cập nhật trạng thái bận/rảnh tương thích với hệ thống TaskPool.
+\end{itemize}
+
+
+\subsection{Cách thức hiện thực}
+
+$\indent$Problem~2 mở rộng hệ thống sang mô hình đa tiến trình bằng cách thay thế toàn bộ 
+worker-thread bằng worker-process được tạo bởi \texttt{fork()}. Sự chuyển đổi này 
+làm thay đổi cơ chế chia sẻ dữ liệu và đồng bộ hóa, buộc hệ thống triển khai 
+một kiến trúc mới dựa trên POSIX Shared Memory kết hợp Signal IPC, 
+nhưng vẫn giữ nguyên mô hình lập lịch FIFO từ Problem~1.
+
+\vspace{0.2cm}
+Kiến trúc thực thi xoay quanh bốn thành phần chính:
+\begin{enumerate}
+    \item Tạo worker bằng \texttt{fork()}.
+    \item Duy trì vùng nhớ dùng chung cho master và worker.
+    \item Worker hoạt động theo cơ chế event--driven với \texttt{sigwait()}.
+    \item Master dispatch nhiệm vụ bằng tín hiệu hệ điều hành.
+\end{enumerate}
+
+% -----------------------------------------------------
+\subsubsection*{1. Khởi tạo worker bằng \texttt{fork()}}
+
+$\indent$Hệ thống tạo từng worker trong hàm \texttt{bkwrk\_create\_worker()} bằng:
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    pid = fork();
+\end{lstlisting}
+
+Đặc điểm của mô hình:
+\begin{itemize}
+    \item Mỗi worker là một tiến trình độc lập, có không gian bộ nhớ riêng.
+    \item Worker không truy cập được biến toàn cục của master.
+    \item Master lưu lại PID trong \texttt{wrkid\_tid[]} để gửi tín hiệu.
+\end{itemize}
+
+Quy trình khởi tạo:
+\begin{itemize}
+    \item Master cố định \texttt{worker\_id} để tránh race condition.
+    \item Khoá tín hiệu \texttt{SIGUSR1} và \texttt{SIGQUIT} trước khi fork.
+    \item Tiến trình con nhảy vào vòng lặp \texttt{bkwrk\_worker()}.
+    \item Tiến trình cha khởi tạo worker trong shared memory.
+\end{itemize}
+
+Kết quả: hệ thống hình thành một tập worker-process độc lập nhưng được điều khiển thống nhất.
+
+% -----------------------------------------------------
+\subsubsection*{2. POSIX Shared Memory}
+
+$\indent$Do worker-process không thể truy cập biến toàn cục, hệ thống sử dụng hai vùng shared memory:
+\begin{itemize}
+    \item \textbf{Busy Array}: lưu trạng thái rảnh/bận.
+    \item \textbf{Worker Array}: chứa \texttt{func}, \texttt{arg}, và \texttt{bktaskid}.
+\end{itemize}
+
+Shared memory được tạo bằng:
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    mmap(... MAP_SHARED ...)
+\end{lstlisting}
+
+Ý nghĩa:
+\begin{itemize}
+    \item Master cập nhật task và trạng thái → worker nhìn thấy tức thời.
+    \item Không cần pipe, socket hay message queue.
+    \item Tốc độ cao, đồng bộ thời gian thực.
+\end{itemize}
+
+% -----------------------------------------------------
+\subsubsection*{3. Vòng đời worker-process}
+
+$\indent$Worker-process vận hành trong \texttt{bkwrk\_worker()} theo hai bước lặp:
+
+\paragraph*{(1) Chờ tín hiệu bằng \texttt{sigwait()}}
+
+\begin{verbatim}
+                            sigwait(&set, &sig);
+\end{verbatim}
+
+Đặc điểm:
+\begin{itemize}
+    \item Worker không tiêu tốn CPU khi idle.
+    \item Chỉ hoạt động khi master gửi \texttt{SIG\_DISPATCH}.
+    \item Loại bỏ hoàn toàn busy-waiting.
+\end{itemize}
+
+\paragraph*{(2) Thực thi tác vụ}
+\begin{verbatim}
+                            wrk->func(wrk->arg);
+\end{verbatim}
+
+Sau khi hoàn tất:
+\begin{itemize}
+    \item Đặt lại \texttt{busy = 0}.
+    \item Xoá \texttt{func}, \texttt{arg}, \texttt{taskid}.
+    \item Quay về trạng thái chờ trong \texttt{sigwait()}.
+\end{itemize}
+
+% -----------------------------------------------------
+\subsubsection*{4. Gán tác vụ bằng shared memory}
+
+$\indent$Trong \texttt{bktask\_assign\_worker()}:
+\begin{itemize}
+    \item Master ghi trực tiếp \texttt{func}, \texttt{arg} vào worker array.
+    \item Đặt trạng thái \texttt{busy = 1}.
+\end{itemize}
+
+\end{itemize}
+
+% -----------------------------------------------------
+\subsubsection*{5. Dispatch worker bằng tín hiệu}
+
+$\indent$Worker được kích hoạt bằng:
+\begin{verbatim}
+                            kill(pid, SIG_DISPATCH);
+\end{verbatim}
+
+Ưu điểm:
+\begin{itemize}
+    \item Worker thoát khỏi \texttt{sigwait()} ngay lập tức.
+    \item Không cần lock hay queue.
+    \item IPC đơn giản nhưng hiệu quả.
+\end{itemize}
+
+% -----------------------------------------------------
+\subsubsection*{6. Thuật toán lập lịch FIFO}
+
+$\indent$Cơ chế FIFO được giữ nguyên:
+\begin{verbatim}
+                            for (i = 0; i < MAX_WORKER; i++)
+                                if (!busy[i]) return i;
+\end{verbatim}
+
+Shared memory đảm bảo trạng thái worker được cập nhật chính xác, giúp:
+\begin{itemize}
+    \item Tránh starvation,
+    \item Duy trì tính công bằng,
+    \item Phù hợp mô hình worker đồng nhất.
+\end{itemize}
+
+% -----------------------------------------------------
+\subsubsection*{7. Pipeline tổng thể Problem 2}
+
+\begin{enumerate}
+    \item Master tạo worker-process bằng \texttt{fork()}.
+    \item Khởi tạo shared memory cho busy array và worker array.
+    \item Worker vào vòng \texttt{sigwait()}.
+    \item Master tạo task và chọn worker theo FIFO.
+    \item Ghi dữ liệu task vào shared memory.
+    \item Gửi tín hiệu \texttt{SIGUSR1} cho worker.
+    \item Worker thực thi hàm \texttt{func(arg)}.
+    \item Worker đánh dấu rảnh và quay lại \texttt{sigwait()}.
+\end{enumerate}
+
+Pipeline này mô phỏng hoàn chỉnh mô hình thread scheduling trên kiến trúc đa tiến trình, đảm bảo tính độc lập, an toàn và hiệu năng cao.
+
+
+\newpage
+
+\subsection{Output đầu ra}
+$\indent$Khi biên dịch Problem 2, hệ thống cung cấp hai chế độ thực thi:
+
+\begin{itemize}
+    \item \textbf{Thread mode} (\texttt{make thread}): Worker hoạt động như các \emph{thread} dựa trên \texttt{clone()} và chia sẻ toàn bộ không gian địa chỉ với tiến trình chính.
+    \item \textbf{Fork mode} (\texttt{make fork}): Worker hoạt động như các \emph{process độc lập}, sử dụng \texttt{fork()} kết hợp với POSIX Shared Memory để trao đổi dữ liệu.
+\end{itemize}
+
+Thread mode chủ yếu dùng để đối chiếu với Problem~1; phần trọng tâm của Problem~2 là cơ chế fork-mode.
+
+
+\subsection*{1. Thread Mode (\texttt{make thread}) - Tương tự Problem 1}
+
+$\indent$Khi chạy:
+
+\begin{verbatim}
+    make thread
+    ./mypool
+\end{verbatim}
+
+\noindent quá trình xử lý tương tự hoàn toàn Problem~1 vì:
+
+\begin{itemize}
+    \item Các worker được tạo bằng \texttt{clone()} với cờ \texttt{CLONE\_VM}, cho phép chia sẻ bộ nhớ với master.
+    \item Trạng thái worker (\texttt{wrkid\_busy[]} và \texttt{worker[]}) là biến toàn cục nằm trong chung một không gian địa chỉ.
+    \item Worker block tại \texttt{sigwait()} và được đánh thức bằng \texttt{tkill(tid, SIGUSR1)}.
+\end{itemize}
+
+Kết quả output :
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=14.5cm]{image/2a.png}
+    \vspace{0.5cm}
+    \caption{Kết quả thực thi Problem 2 ở chế độ Thread Mode (clone)}
+\end{figure}
+
+\newpage
+
+
+\subsection*{2. Fork Mode (\texttt{make fork})}
+
+$\indent$Khi chạy:
+
+\begin{verbatim}
+    make fork
+    ./mypool
+\end{verbatim}
+
+\noindent hệ thống chuyển sang mô hình worker-process độc lập. Điều này dẫn tới sự thay đổi hoàn toàn cơ chế chia sẻ dữ liệu và đồng bộ hoá: tất cả thông tin liên quan worker được đặt trong POSIX Shared Memory, và việc đánh thức tiến trình dùng lệnh \texttt{kill()}.
+
+Kết quả output :
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=16cm]{image/2b.png}
+    \vspace{0.5cm}
+    \caption{Kết quả thực thi Problem 2 ở chế độ Fork Mode (worker-process + POSIX shared memory)}
+\end{figure}
+
+
+
+
+\subsubsection*{1. Khởi tạo worker-process bằng \texttt{fork()}}
+
+$\indent$Output:
+
+\begin{verbatim}
+                            bkwrk_create_worker got worker PID 1443
+                            bkwrk_create_worker got worker PID 1444
+                            bkwrk_create_worker got worker PID 1445
+                            bkwrk_create_worker got worker PID 1446
+                            bkwrk_create_worker got worker PID 1447
+                            bkwrk_create_worker got worker PID 1448
+                            bkwrk_create_worker got worker PID 1449
+                            bkwrk_create_worker got worker PID 1450
+                            bkwrk_create_worker got worker PID 1451
+                            bkwrk_create_worker got worker PID 1452
+\end{verbatim}
+
+Giải thích:
+
+\begin{itemize}
+    \item Hàm \texttt{bkwrk\_create\_worker()} gọi \texttt{fork()} 10 lần để tạo 10 worker-process độc lập.
+    \item Mỗi worker có PID riêng và chuyển ngay vào hàm \texttt{bkwrk\_worker()}, sau đó block tại \texttt{sigwait()}.
+    \item Vì tiến trình con không chia sẻ bộ nhớ với master, module \texttt{bkshm.c} tạo hai vùng shared memory:
+    \begin{itemize}
+        \item \textbf{Busy array}: theo dõi trạng thái rảnh/bận.
+        \item \textbf{Worker array}: chứa \texttt{func}, \texttt{arg} và mã tác vụ.
+    \end{itemize}
+\end{itemize}
+
+Điều này xác nhận worker-process đã khởi tạo thành công.
+
+\subsubsection*{2. Gán tác vụ đầu tiên bằng FIFO}
+
+$\indent$Output:
+
+\begin{verbatim}
+                            Assign tsk 0 wrk 0
+\end{verbatim}
+
+Ý nghĩa:
+
+\begin{itemize}
+    \item Scheduler FIFO duyệt từ worker 0 và tìm worker rảnh đầu tiên.
+    \item Master ghi trực tiếp vào shared memory:
+\end{itemize}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    wrkid_busy[0] = 1;
+    worker[0].func = tsk->func;
+    worker[0].arg  = tsk->arg;
+\end{lstlisting}
+
+
+Không có IPC khác; worker sẽ đọc dữ liệu này khi được đánh thức.
+
+\subsubsection*{3. Đánh thức worker-process và thực thi tác vụ}
+
+$\indent$Output:
+
+\begin{verbatim}
+                            worker wake 0 up
+                            Task func - Hello from 1
+\end{verbatim}
+
+Giải thích pipeline:
+
+\begin{enumerate}
+    \item Worker 0 đang chờ tại \texttt{sigwait()}.
+    \item Master gọi:
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    kill(pid_of_worker_0, SIGUSR1);
+\end{lstlisting}
+    \item Worker 0 thoát khỏi \texttt{sigwait()}, đọc \texttt{func} và \texttt{arg} từ shared memory.
+    \item Hàm tác vụ được thực thi và in ra thông báo.
+    \item Worker đặt lại trạng thái về IDLE và quay về \texttt{sigwait()}.
+\end{enumerate}
+
+\subsubsection*{4. Scheduling bất đồng bộ}
+
+$\indent$Output:
+
+\begin{verbatim}
+                        Assign tsk 1 wrk 0 >>>>>>>>>> Activate asynchronously
+                        Assign tsk 2 wrk 1 >>>>>>>>>> Activate asynchronously
+\end{verbatim}
+
+Giải thích:
+
+\begin{itemize}
+    \item Task 1: worker 0 đã rảnh trở lại nên FIFO tiếp tục gán task cho worker 0.
+    \item Task 2: worker 1 là worker rảnh tiếp theo.
+    \item Cả hai tác vụ đều được gán trong khi master không chờ worker hoàn tất nhiệm vụ.
+\end{itemize}
+
+Thông tin ghi vào shared memory:
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    worker[0].arg = 2;
+    worker[1].arg = 5;
+\end{lstlisting}
+
+\subsubsection*{5. Worker-process xử lý các tác vụ tiếp theo}
+
+$\indent$Output:
+
+\begin{verbatim}
+                            worker wake 0 up
+                            Task func - Hello from 2
+                            worker wake 1 up
+                            Task func - Hello from 5
+\end{verbatim}
+
+Pipeline hoạt động:
+
+\begin{itemize}
+    \item Master gửi tín hiệu \texttt{SIGUSR1} tới từng PID tương ứng.
+    \item Worker 0 đọc tham số = 2 và thực thi hàm.
+    \item Worker 1 đọc tham số = 5 và thực thi hàm.
+\end{itemize}
+
+Mỗi worker sau khi hoàn thành đều đặt \texttt{busy = 0} và quay về \texttt{sigwait()}.
+
+\subsection*{Tổng quát}
+
+Fork-mode triển khai đầy đủ pipeline xử lý bằng đa tiến trình:
+
+\begin{enumerate}
+    \item Tạo worker-process bằng \texttt{fork()}.
+    \item Khởi tạo shared memory để chia sẻ dữ liệu giữa master và worker.
+    \item FIFO chọn worker rảnh đầu tiên.
+    \item Master gán task bằng thao tác ghi vào shared memory.
+    \item Master gửi tín hiệu đánh thức worker.
+    \item Worker đọc task, thực thi và trả về trạng thái IDLE.
+    \item Master tiếp tục lập lịch các tác vụ tiếp theo.
+\end{enumerate}
+
+Mỗi dòng output đều phản ánh chính xác luồng xử lý được lập trình trong mã nguồn.
+% ------------------------------------------------------------------
+
+\section{PROBLEM 3 - Xây dựng mô hình Fork–Join Framework}
+
+
+\subsection{Mở đầu}
+
+$\indent$Mô hình \textbf{Fork--Join} là một kiến trúc song song truyền thống, được áp dụng trong 
+nhiều hệ thống đa luồng và thư viện tính toán hiệu năng cao như Java Fork/Join Pool, 
+Intel TBB, OpenMP Task Parallelism và các hệ thống dựa trên POSIX Threads. 
+Nguyên lý hoạt động của mô hình gồm ba pha:
+
+\begin{itemize}
+    \item \textbf{Fork}: phân rã bài toán lớn thành tập hợp các tác vụ nhỏ độc lập.
+    \item \textbf{Parallel Execution}: phân phối và thực thi tác vụ đồng thời trên nhiều worker.
+    \item \textbf{Join}: đồng bộ, chờ tất cả tác vụ hoàn tất và hợp nhất kết quả.
+\end{itemize}
+
+Trong \textbf{Problem 3}, nhiệm vụ là xây dựng một Fork--Join Framework tối giản nhưng hoàn chỉnh,
+hoạt động ổn định trong môi trường đa luồng POSIX và đáp ứng các yêu cầu:
+
+\begin{itemize}
+    \item Phân chia tác vụ thành các đơn vị độc lập;
+    \item Thực thi song song trên nhóm worker thread bền vững;
+    \item Đồng bộ chính xác quá trình hoàn tất bằng condition variable;
+    \item Thu kết quả của từng tác vụ theo ID.
+\end{itemize}
+
+Bộ mã nguồn \texttt{bkfj.c / bkfj.h} sử dụng đầy đủ các cơ chế đồng bộ POSIX: mutex, semaphore,
+condition variable và memory barrier, đảm bảo không xảy ra busy-wait hay race condition.
+
+% --------------------------------------------------------------------
+
+\subsection{Mục tiêu và Yêu cầu Thiết kế}
+
+$\indent$Framework phải tận dụng tối đa khả năng song song của hệ thống thông qua một nhóm worker thread hoạt động độc lập. Mỗi worker phải:
+
+\subsubsection*{3.2.1. Song song thực sự}
+
+$\indent$Framework phải tận dụng tối đa khả năng song song của CPU:
+
+\begin{itemize}
+    \item mỗi worker thread chạy độc lập;
+    \item worker ngủ bằng \texttt{sem\_wait()} và chỉ thức khi có task mới;
+    \item các task được xử lý hoàn toàn song song.
+\end{itemize}
+
+\subsubsection*{3.2.2. Đồng bộ và nhất quán tuyệt đối}
+
+$\indent$Framework phải ngăn chặn mọi race condition trên tài nguyên chia sẻ. Do đó, toàn bộ truy cập quan trọng đều được bảo vệ:
+
+\begin{itemize}
+    \item \texttt{queue\_mutex}: push/pop trong Task Queue,
+    \item \texttt{completed\_mutex}: Completed List,
+    \item \texttt{task\_id\_mutex}: cấp phát ID an toàn,
+    \item \texttt{count\_mutex + all\_done\_cond}: xử lý join.
+\end{itemize}
+
+
+\subsubsection*{3.2.3. Tối ưu hiệu năng và tái sử dụng}
+$\indent$Một trong các yêu cầu thiết kế quan trọng:
+\begin{itemize}
+    \item Worker thread được tạo một lần, chạy liên tục và tái sử dụng cho tất cả chu kỳ fork–join.
+    \item Không busy-wait, không dùng sleep thủ công.
+    \item Join không tốn CPU, master block cho đến khi tất cả task hoàn tất.
+    \item Hỗ trợ nhiều chu kỳ fork--join liên tiếp (được kiểm chứng bằng \texttt{test\_multiple\_cycles}).
+\end{itemize}
+
+\subsubsection*{3.2.4. API rõ ràng, dễ dùng}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|l|}
+\hline
+\textbf{API} & \textbf{Chức năng} \\ \hline
+fj\_pool\_init(N) & Tạo pool gồm N worker thread \\ \hline
+fj\_fork(func, arg) & Tạo task và đưa vào Task Queue \\ \hline
+fj\_join() & Đồng bộ, đợi tất cả tác vụ hoàn tất \\ \hline
+fj\_get\_result(task\_id) & Lấy kết quả của task theo ID \\ \hline
+fj\_pool\_destroy() & Giải phóng toàn bộ tài nguyên \\ \hline
+\end{tabular}
+\end{table}
+
+% --------------------------------------------------------------------
+
+\subsection{Kiến trúc Tổng thể của Hệ thống}
+
+$\indent$Kiến trúc Fork–Join Framework được tổ chức thành ba thành phần trung tâm, hoạt động phối hợp nhịp nhàng như một pipeline song song hoàn chỉnh.
+
+\subsubsection*{3.3.1. Worker Pool}
+
+\begin{itemize}
+    \item Gồm tối đa \texttt{MAX\_FJ\_WORKERS} worker thread.
+    \item Mỗi worker chạy vòng lặp vô hạn và ngủ trên semaphore.
+    \item Worker chỉ dừng khi framework shutdown.
+\end{itemize}
+
+\subsubsection*{3.3.2. Task Queue (FIFO)}
+
+\begin{itemize}
+    \item Hàng đợi tác vụ dùng danh sách liên kết đơn.
+    \item Đảm bảo tính FIFO đúng nghĩa.
+    \item Truy cập được bảo vệ bởi \texttt{queue\_mutex}.
+\end{itemize}
+
+\subsubsection*{3.3.3. Completed List}
+
+\begin{itemize}
+    \item Lưu từng task đã hoàn tất cùng với kết quả trả về \texttt{(task->result)}.
+    \item Bảo vệ bằng \texttt{completed\_mutex}.
+    \item Hỗ trợ duyệt hoặc truy xuất theo ID.
+\end{itemize}
+
+Pipeline tổng thể:
+
+\[
+\text{Master} \xrightarrow{\text{Fork}} 
+\text{Task Queue} \xrightarrow{\text{Worker}} 
+\text{Completed List} \xrightarrow{\text{Join}} 
+\text{Master}
+\]
+
+% --------------------------------------------------------------------
+
+\subsection{Worker Pool và Cơ chế Hoạt động}
+
+\subsubsection*{3.4.1. Khởi tạo Worker}
+
+$\indent$Trong \texttt{fj\_pool\_init()}:
+
+\begin{itemize}
+    \item Cấp phát \texttt{fj\_pool\_t};
+    \item Khởi tạo mutex, semaphore, condition variable;
+    \item Tạo N worker thread:
+\end{itemize}
+
+\begin{verbatim}
+        pthread_create(&pool->workers[i], NULL, fj_worker_thread, pool);
+\end{verbatim}
+
+Worker sau đó lập tức vào \texttt{sem\_wait()}.
+
+\subsubsection*{3.4.2. Vòng đời của Worker Thread}
+
+$\indent$Mỗi worker thực hiện chu trình:
+
+\begin{enumerate}
+    \item \textbf{Chờ nhiệm vụ}: sem\_wait();
+    \item \textbf{Lấy task FIFO}: bảo vệ bằng \texttt{queue\_mutex};
+    \item \textbf{Thực thi task}:
+    
+\begin{verbatim}
+result = task->func(task->arg);
+\end{verbatim}
+
+    \item \textbf{Lưu kết quả}: chuyển vào Completed List;
+    \item \textbf{Cập nhật active\_tasks}: khi còn 0 → báo join;
+    \item \textbf{Quay về \texttt{sem\_wait()} chờ nhiệm vụ mới}.
+\end{enumerate}
+
+
+% --------------------------------------------------------------------
+
+\subsection{Hàng đợi Tác vụ (Task Queue)}
+
+$\indent$Trong \texttt{fj\_fork()}:
+
+\begin{enumerate}
+    \item Cấp phát \texttt{fj\_task\_t};
+    \item Gán task ID bằng hàm nguyên tử \texttt{get\_next\_task\_id()};
+    \item Thêm task vào đuôi queue (\texttt{queue\_mutex});
+    \item Tăng \texttt{active\_tasks};
+    \item Đánh thức worker: \texttt{sem\_post()}.
+\end{enumerate}
+
+Master hoàn toàn không bị block.
+
+% --------------------------------------------------------------------
+
+\subsection{Cơ chế Join và Đồng bộ Hoàn tất}
+
+$\indent$Join được xây dựng đúng chuẩn POSIX bằng condition variable:
+
+\begin{itemize}
+    \item \texttt{active\_tasks} đếm số task đang thực thi.
+    \item Worker giảm biến này khi hoàn tất.
+    \item Khi về 0: worker phát sự kiện:
+\end{itemize}
+
+\begin{verbatim}
+                    pthread_cond_broadcast(&pool->all_done_cond);
+\end{verbatim}
+
+Trong \texttt{fj\_join()}:
+
+\begin{verbatim}
+                    while (active_tasks > 0)
+                        pthread_cond_wait(&all_done_cond, &count_mutex);
+\end{verbatim}
+
+
+% --------------------------------------------------------------------
+
+\subsection{Completed List và Thu kết quả}
+
+$\indent$Sau khi worker hoàn tất:
+
+\begin{itemize}
+    \item lưu \texttt{task->result};
+    \item chuyển task vào Completed List (\texttt{completed\_mutex}).
+\end{itemize}
+
+API hỗ trợ:
+
+\begin{itemize}
+    \item \texttt{fj\_get\_result(id)};
+    \item \texttt{fj\_get\_all\_results()};
+    \item \texttt{fj\_free\_result(id)}.
+\end{itemize}
+
+Pipeline xử lý và pipeline thu kết quả được tách biệt rõ ràng.
+
+% --------------------------------------------------------------------
+
+\subsection{Cleanup và Hủy tài nguyên}
+
+$\indent$Hàm \texttt{fj\_pool\_destroy()} thực hiện:
+
+\begin{enumerate}
+    \item Đặt \texttt{shutdown = 1};
+    \item Đánh thức toàn bộ worker bằng \texttt{sem\_post()};
+    \item Join tất cả worker thread;
+    \item Giải phóng queue, completed list;
+    \item Hủy mutex, semaphore, condition variable;
+    \item Giải phóng pool.
+\end{enumerate}
+
+Đảm bảo không rò rỉ bộ nhớ và worker kết thúc an toàn.
+
+% --------------------------------------------------------------------
+
+\subsection{Quy trình thực thi của hệ thống (Execution Workflow)}
+
+$\indent$Dựa trên mã kiểm thử \texttt{test\_forkjoin.c}, quá trình vận hành đầy đủ của 
+Fork--Join Framework được mô tả theo sáu bước dưới đây. Quy trình thể hiện rõ 
+chu trình \textit{fork → execute → join → collect} đặc trưng của mô hình Fork--Join.
+
+\subsection*{Bước 1 - Khởi tạo Pool}
+
+\begin{verbatim}
+                    fj_pool_t *pool = fj_pool_init(4);
+\end{verbatim}
+
+Lệnh trên tạo ra một \textit{pool} gồm 4 worker thread.  
+Sau khi được tạo, mỗi worker lập tức đi vào trạng thái chờ nhiệm vụ bằng
+\texttt{sem\_wait()}, đảm bảo không tiêu tốn CPU cho đến khi có tác vụ mới.
+
+\subsection*{Bước 2 - Fork (Gửi tác vụ vào Task Queue)}
+
+$\indent$Ví dụ trong hàm kiểm thử \texttt{test\_parallel\_square()}:
+
+\begin{verbatim}
+                    fj_fork(pool, square_task, (void*)(intptr_t)i);
+\end{verbatim}
+
+Khi master gọi \texttt{fj\_fork()}:
+
+\begin{itemize}
+    \item \texttt{fj\_task\_t} mới được cấp phát;
+    \item task được gán \textit{task ID} duy nhất;
+    \item task được đưa vào cuối hàng đợi FIFO;
+    \item biến đếm \texttt{active\_tasks} tăng lên;
+    \item một worker đang ngủ được đánh thức bằng \texttt{sem\_post()}.
+\end{itemize}
+
+Việc gửi tác vụ hoàn toàn không làm master bị chặn, đúng với tinh thần 
+\textit{producer/consumer} song song.
+
+\subsection*{Bước 3 - Worker xử lý song song}
+
+$\indent$Mỗi worker, khi được đánh thức, thực hiện quy trình:
+
+\begin{enumerate}
+    \item Lấy task đầu tiên trong Task Queue (bảo vệ bởi \texttt{queue\_mutex}).
+    \item Gọi hàm xử lý tương ứng, ví dụ:
+    \begin{itemize}
+        \item \texttt{square\_task()},
+        \item \texttt{fib\_task()}.
+    \end{itemize}
+    \item Lưu kết quả vào \texttt{task->result} và chuyển task vào Completed List.
+    \item Giảm \texttt{active\_tasks}.  
+          Nếu số task còn lại bằng 0, worker phát tín hiệu đánh thức master:
+          \begin{verbatim}
+                pthread_cond_broadcast(&pool->all_done_cond);
+          \end{verbatim}
+\end{enumerate}
+
+Tất cả worker chạy hoàn toàn độc lập → tạo ra mức độ song song tối đa.
+
+\subsection*{Bước 4 - Join (Đợi toàn bộ tác vụ hoàn tất)}
+
+\begin{verbatim}
+                    fj_join(pool);
+\end{verbatim}
+
+Khi join được gọi, master thread:
+
+\begin{itemize}
+    \item đi vào trạng thái block trên \texttt{all\_done\_cond};
+    \item chỉ được đánh thức khi \texttt{active\_tasks == 0}.
+\end{itemize}
+
+Join không sử dụng busy-wait, đảm bảo hiệu năng tối ưu và CPU không bị lãng phí.
+
+\subsection*{Bước 5 - Thu kết quả (tuỳ chọn)}
+
+$\indent$Sau khi join hoàn tất, người dùng có thể truy xuất kết quả:
+
+\begin{itemize}
+    \item theo \textit{task ID}:
+    \begin{verbatim}
+                    fj_get_result(id);
+    \end{verbatim}
+    \item hoặc duyệt toàn bộ Completed List để xử lý đồng loạt.
+\end{itemize}
+
+Thiết kế tách riêng pipeline xử lý và pipeline thu kết quả giúp hệ thống dễ mở rộng.
+
+\subsection*{Bước 6 - Destroy (Giải phóng tài nguyên)}
+
+\begin{verbatim}
+                    fj_pool_destroy(pool);
+\end{verbatim}
+
+Hàm hủy pool thực hiện:
+
+\begin{itemize}
+    \item đặt cờ \texttt{shutdown = 1};
+    \item đánh thức tất cả worker còn đang chờ;
+    \item join từng worker thread;
+    \item giải phóng Task Queue và Completed List;
+    \item hủy mutex, semaphore và condition variable.
+\end{itemize}
+
+Toàn bộ tài nguyên được giải phóng an toàn, không rò rỉ và không để lại trạng thái lock.
+
+
+
+
+
+
+\subsection{Output đầu ra}
+$\indent$Chương trình được biên dịch bằng lệnh \texttt{make} để tạo ra tệp thực thi \texttt{test\_fj}. 
+Sau đó, quá trình kiểm thử được tiến hành bằng cách chạy:
+
+\begin{verbatim}
+        ./test_fj
+\end{verbatim}
+
+Chương trình lần lượt thực hiện ba nhóm kiểm thử: 
+(1) tính bình phương song song, 
+(2) tính dãy Fibonacci song song, 
+và (3) vận hành nhiều chu kỳ Fork--Join liên tiếp. 
+
+
+
+
+Kết quả output :
+
+
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=13cm]{image/3a.png}
+    \includegraphics[width=13cm]{image/3b.png}
+    \includegraphics[width=13cm]{image/3c.png}
+    \vspace{0.5cm}
+    \caption{Kết quả chạy chương trình minh họa Fork–Join Framework}
+\end{figure}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\newpage
+
+
+\subsection*{* Phân tích Output - Cơ chế Fork--Join thể hiện qua kết quả chạy}
+
+$\indent$Kết quả thực thi chương trình \texttt{test\_fj} cho thấy rõ vòng đời hoạt động của một Fork--Join Framework: 
+\textit{fork tác vụ → worker thực thi song song → join đợi toàn bộ hoàn tất → thu kết quả → lặp lại nhiều chu kỳ}. 
+Ba nhóm kiểm thử dưới đây minh họa trọn vẹn hành vi của hệ thống.
+
+%------------------------------------------------------
+\subsection*{Test 1 - Parallel Square Computation}
+
+\subsubsection*{1. Giai đoạn khởi tạo}
+\begin{verbatim}
+                        Pool initialized with 4 workers
+\end{verbatim}
+
+Pool gồm 4 worker thread được tạo và ngay lập tức chuyển vào trạng thái chờ. Đây là giai đoạn chuẩn bị cho chu trình fork–join.
+
+\subsubsection*{2. Giai đoạn Fork}
+\begin{verbatim}
+                        FORK: Submitting 10 tasks...
+\end{verbatim}
+
+Master gửi đồng thời 10 tác vụ vào hệ thống. Tại thời điểm này, toàn bộ tác vụ chỉ được đưa vào hàng đợi, chưa có xử lý thực tế.
+
+\subsubsection*{3. Giai đoạn Join}
+\begin{verbatim}
+                        JOIN: Waiting for all tasks to complete...
+\end{verbatim}
+
+Master block trong lệnh \texttt{join}, chờ tất cả worker báo hoàn thành.
+
+\subsubsection*{4. Worker thực thi song song}
+\begin{verbatim}
+                          [Worker] 1^2 = 1
+                          [Worker] 3^2 = 9
+                          [Worker] 2^2 = 4
+                          [Worker] 4^2 = 16
+                          [Worker] 5^2 = 25
+                          [Worker] 6^2 = 36
+                          [Worker] 7^2 = 49
+                          [Worker] 8^2 = 64
+                          [Worker] 10^2 = 100
+                          [Worker] 9^2 = 81
+\end{verbatim}
+
+Các kết quả được in ra:
+\begin{itemize}
+    \item Không theo thứ tự tuần tự (1–10), mà theo đúng thời điểm worker hoàn thành tác vụ.
+    \item Chứng minh tính \textbf{song song thực sự}, mỗi worker lấy và xử lý tác vụ độc lập.
+\end{itemize}
+
+\subsubsection*{5. Hoàn tất chu kỳ}
+\begin{verbatim}
+                        All tasks completed in 0.001 seconds
+\end{verbatim}
+
+Join chỉ kết thúc khi toàn bộ 10 tác vụ đã được xử lý và báo hoàn thành. Điều này xác thực cơ chế đồng bộ hoạt động chính xác.
+
+%------------------------------------------------------
+\subsection{Test 2 - Fibonacci Computation}
+
+\subsubsection*{1. Khởi tạo lại Pool}
+\begin{verbatim}
+                        Pool initialized with 4 workers
+\end{verbatim}
+
+Một pool mới được tạo để đảm bảo quá trình kiểm thử độc lập.
+
+\subsubsection*{2. Fork các tác vụ Fibonacci}
+\begin{verbatim}
+                        FORK: Computing fib(0) to fib(15)...
+\end{verbatim}
+
+Tổng cộng 16 tác vụ \texttt{fib()} được đẩy vào hàng đợi theo cơ chế FIFO.
+
+\subsubsection*{3. Worker xử lý song song}
+Ví dụ các dòng tiêu biểu:
+\begin{verbatim}
+                          [Worker] fib(0) = 0
+                          [Worker] fib(1) = 1
+                          [Worker] fib(2) = 1
+                          [Worker] fib(3) = 2
+                          [Worker] fib(4) = 3
+                          [Worker] fib(5) = 5
+                          [Worker] fib(6) = 8
+                          [Worker] fib(8) = 21
+                          [Worker] fib(7) = 13
+                          [Worker] fib(11) = 89
+                          [Worker] fib(12) = 144
+                          [Worker] fib(13) = 233
+                          [Worker] fib(14) = 377
+                          [Worker] fib(15) = 610
+                          [Worker] fib(9) = 34
+                          [Worker] fib(10) = 55
+\end{verbatim}
+
+Nhận xét:
+\begin{itemize}
+    \item Kết quả không theo thứ tự 0–15 vì mỗi tác vụ Fibonacci có độ phức tạp khác nhau.
+    \item Worker nào rảnh trước sẽ xử lý trước, tạo ra thứ tự hoàn thành phi tuyến tính.
+    \item Đây là hành vi đặc trưng của mô hình Fork--Join.
+\end{itemize}
+
+\subsubsection*{4. Hoàn tất Join}
+\begin{verbatim}
+                        All tasks completed in 0.000 seconds
+\end{verbatim}
+
+Join kết thúc khi toàn bộ 16 tác vụ đã hoàn thành, xác nhận tính đúng đắn của cơ chế đồng bộ.
+
+%------------------------------------------------------
+
+
+\newpage
+\subsection{Test 3 - Multiple Fork--Join Cycles}
+
+Kiểm thử này đánh giá khả năng tái sử dụng worker pool qua nhiều chu kỳ liên tiếp.
+
+%----------------------------------
+\subsubsection*{1. Chu kỳ 1 – Fork}
+\begin{verbatim}
+                        FORK: Submitting 5 tasks (1^2 to 5^2)
+\end{verbatim}
+
+\subsubsection*{2. Chu kỳ 1 – Worker xử lý}
+\begin{verbatim}
+                          [Worker] 1^2 = 1
+                          [Worker] 3^2 = 9
+                          [Worker] 4^2 = 16
+                          [Worker] 2^2 = 4
+                          [Worker] 5^2 = 25
+\end{verbatim}
+
+Thứ tự hoàn tất không trùng với thứ tự gửi vào queue, cho thấy worker xử lý hoàn toàn độc lập.
+
+\subsubsection*{3. Chu kỳ 1 – Join}
+\begin{verbatim}
+                        Cycle 1 completed
+\end{verbatim}
+
+%----------------------------------
+\subsubsection*{4. Chu kỳ 2 – Fork}
+\begin{verbatim}
+                        FORK: Submitting 5 tasks (6^2 to 10^2)
+\end{verbatim}
+
+\subsubsection*{5. Chu kỳ 2 – Worker xử lý}
+\begin{verbatim}
+                          [Worker] 6^2 = 36
+                          [Worker] 8^2 = 64
+                          [Worker] 7^2 = 49
+                          [Worker] 9^2 = 81
+                          [Worker] 10^2 = 100
+\end{verbatim}
+
+Worker từ chu kỳ 1 tiếp tục được sử dụng, chứng minh cơ chế \textbf{tái sử dụng pool} hoạt động ổn định.
+
+\subsubsection*{6. Chu kỳ 2 – Join}
+\begin{verbatim}
+                        Cycle 2 completed
+\end{verbatim}
+
+Hai chu kỳ liên tiếp hoàn thành đầy đủ, xác nhận:
+\begin{itemize}
+    \item Worker không bị treo.
+    \item Không có rò rỉ tài nguyên.
+    \item Pipeline Fork--Join vận hành đúng trong môi trường lặp.
+\end{itemize}

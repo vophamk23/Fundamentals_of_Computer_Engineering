@@ -1,0 +1,1269 @@
+
+\section{Introduction}
+$\indent$Timers are one of the most important features in modern micro-controllers. They allow us to measure how long something takes to execute, create non-blocking code, precisely control pin timing, and even run operating systems. In this manual, how to configure a timer using STM32CubeIDE is presented how to use them to flash an LED. Finally, students are proposed to finalize 10 exercises using timer interrupt for applications based LED Scanning.
+
+\renewcommand{\figurename}{Figure}
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=3.5in]{picture/bai_2/led_scanning1.png}
+    \vspace{0.5cm}
+    \caption{\textit{Four seven segment LED interface for a micro-controller}}
+    \label{bai2_intro1}
+\end{figure}
+
+
+Design an interface for with multiple LED (seven segment or matrix) displays which is to be controlled is depends on the number of input and output pins needed for controlling all the LEDs in the given matrix display, the amount of current that each pin can source and sink and the speed at which the micro-controller can send out control signals. With all these specifications, interfacing can be done for 4 seven segment LEDs with a micro-controller is proposed in the figure above. \\
+
+
+In the above diagram each seven segment display is having 8 internal LEDs, leading to the total number of LEDs is 32. However, not all the LEDs are required to turn ON, but one of them is needed. Therefore, only 12 lines are needed to control the whole 4 seven segment LEDs.   By controlling with the micro-controller, we can turn ON an LED during a same interval \textbf{$T_S$}. Therfore, the period for controlling all 4 seven segment LEDs is \textbf{$4T_S$}. In other words, these LEDs are scanned at frequecy \textbf{$f = 1 / 4T_S$}. Finally, it is obviously that if the frequency is greater than 30Hz (e.g. f = 50Hz), it seems that all LEDs are turn ON at the same time.\\
+
+In this manual, the timer interrupt is used to design the interval $T_S$ for LED scanning. Unfortunately, the simulation on Proteus can not execute at high frequency, the frequency $f$ is set to a low value (e.g. 1Hz). In a real implementation, this frequency should be 50Hz.
+
+
+\newpage
+\section{Timer Interrupt Setup}
+$\indent$\textbf{Step 1: } Create a simple project, which LED connected to PA5. The manual can be found in the first lab.\\
+
+\textbf{Step 2: } Check the clock source of the system on the tab \textbf{Clock Configuration} (from *.ioc file). In the default configuration, the internal clock source is used with 8MHz, as shown in the figure bellow.
+
+\renewcommand{\figurename}{Figure}
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=5.5in]{picture/bai_2/lab2_m1.PNG}
+    \vspace{0.5cm}
+    \caption{\textit{Default clock source for the system}}
+    \label{bai2_m1}
+\end{figure}
+
+\textbf{Step 3: } Configure the timer on the \textbf{Parameter Settings}, as follows:
+\renewcommand{\figurename}{Figure}
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=3.5in]{picture/bai_2/lab2_m2.PNG}
+    \vspace{0.5cm}
+    \caption{\textit{Configure for Timer 2}}
+    \label{bai2_m2}
+\end{figure}
+
+Select the clock source for timer 2 to the \textbf{Internal Clock}. Finally, set the prescaller and the counter to 7999 and 9, respectively. These values are explained as follows:
+\begin{itemize}
+    \item The target is to set an interrupt timer to 10ms
+    \item The clock source is 8MHz, by setting the prescaller to 7999, the input clock source to the timer is \textbf{8MHz/(7999+1) = 1000Hz}.
+    \item The interrupt is raised when the timer counter is counted from 0 to 9, meaning that the frequency is divided by 10, which is 100Hz.
+    \item The frequency of the timer interrupt is 100Hz, meaning that the period is \textbf{1/100Hz = 10ms}.
+\end{itemize}
+
+\textbf{Step 4: } Enable the timer interrupt by switching to \textbf{NIVC Settings} tab, as follows:
+\renewcommand{\figurename}{Figure}
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=4in]{picture/bai_2/lab2_m3.PNG}
+    \vspace{0.5cm}
+    \caption{\textit{Enable timer interrupt}}
+    \label{bai2_m3}
+\end{figure}
+
+Finally, save the configuration file to generate the source code.\\
+
+\textbf{Step 5: } On the \textbf{main()} function, call the timer init function, as follows:
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=Init the timer interrupt in main]
+int main(void)
+{
+  HAL_Init();
+  SystemClock_Config();
+
+  MX_GPIO_Init();
+  MX_TIM2_Init();
+  
+  /* USER CODE BEGIN 2 */
+  HAL_TIM_Base_Start_IT(&htim2);
+  /* USER CODE END 2 */g3
+
+  while (1){
+  
+  }
+}
+\end{lstlisting}
+
+Please put the init function in a right place to avoid conflicts when code generation is executed (e.g. ioc file is updated).\\
+\newpage
+\textbf{Step 6: } Add the interrupt service routine function, this function is invoked every 10ms, as follows:
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=Add an interrupt service routine]
+/* USER CODE BEGIN 4 */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	
+}
+/* USER CODE END 4 */
+\end{lstlisting}
+
+\textbf{Step 7: } To run a LED Blinky demo using interrupt, a short manual is presented as follows:
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=LED Blinky using timer interrupt]
+/* USER CODE BEGIN 4 */
+int counter = 100;
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	counter--;
+	if(counter <= 0){
+		counter = 100;
+		HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
+	}
+}
+/* USER CODE END 4 */
+\end{lstlisting}
+
+The \textbf{HAL\_TIM\_PeriodElapsedCallback} function is an infinite loop, which is invoked every cycle of the timer 2, in this case, is 10ms.\\
+
+
+
+\newpage
+\section{Exercise and Report}
+$\indent$The source code and demo video for LAB2 are stored at:
+\href{https://github.com/vophamk23/Microprocessor_Microcontroller_HCMUT/tree/main/STM32%20LAB%202%20-%20TIMER%20INTERRUPT%20and%20LED%20SCANNING}{Link GitHub Repository – STM32 Lab 2.} and \href{https://www.youtube.com/watch?v=f7WQVmwXXTo}{Link Video Demo For Lab2 - TIMER INTERRUPT AND LED SCANNING}
+\subsection{Exercise 1}
+$\indent$The first exercise show how to interface for multiple seven segment LEDs to STM32F103C6 micro-controller (MCU). Seven segment displays are common anode type, meaning that the anode of all LEDs are tied together as a single terminal and cathodes are left alone as individual pins. \\
+
+In order to save the resource of the MCU, individual cathode pins from all the seven segment LEDs are connected together, and connect to 7 pins of the MCU. These pins are popular known as the \textbf{signal pins}. Meanwhile, the anode pin of each seven segment LEDs are controlled under a power enabling circuit, for instance, an PNP transistor. At a given time, only one seven segment LED is turned on. However, if the delay is small enough, it seems that all LEDs are enabling. \\
+
+Implement the circuit simulation in Proteus with two 7-SEGMENT LEDs as following:
+\renewcommand{\figurename}{Figure}
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=5in]{picture/bai_2/lab2_ex1a.PNG}
+    \vspace{0.5cm}
+    \caption{\textit{Simulation schematic in Proteus}}
+    \label{bai2_pic1a}
+\end{figure}
+Components used in the schematic are listed bellow:
+\begin{itemize}
+    \item 7SEG-COM-ANODE (connected from PB0 to PB6)
+    \item LED-RED
+    \item PNP
+    \item RES
+    \item STM32F103C6
+\end{itemize}
+
+
+Students are proposed to use the function \textbf{display7SEG(int num)} in the Lab 1 in this exercise. Implement the source code in the interrupt callback function to display number \textbf{"1"} on the first seven segment and number \textbf{"2"} for second one. The switching time between 2 LEDs is half of second. \\
+\newpage
+\textbf{\large[Report Solution]:}\\
+
+\textbf{Report 1: } Capture your schematic from Proteus and show in the report.\\
+
+The source code and Proteus simulation schematic are provided at 
+\href{https://github.com/vophamk23/Microprocessor_Microcontroller_HCMUT/tree/main/STM32%20LAB%202%20-%20TIMER%20INTERRUPT%20and%20LED%20SCANNING/EX1_Two7SEG_Display}{STM32 Lab 2 : Two 7SEG Display}\label{link:proteus_repo}.
+\renewcommand{\figurename}{Figure}
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=15cm]{picture/bai_2/LAB2_EX1.png}
+     \vspace{0.5cm}
+    \caption{\textit{Proteus Ex1 Two7SEG Display}}
+    \label{bai1_pic2}
+\end{figure}
+
+\textbf{Report 2: } Present your source code in the \textbf{HAL\_TIM\_PeriodElapsedCallback} function.
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+void display7SEG(int num)
+{
+  // Turn off all segments first
+  HAL_GPIO_WritePin(GPIOB, SEG0_Pin | SEG1_Pin | SEG2_Pin | SEG3_Pin | SEG4_Pin | SEG5_Pin | SEG6_Pin, GPIO_PIN_SET);
+  switch (num)
+  {
+  case 0: // Number 0: segments a b c d e f ON
+    HAL_GPIO_WritePin(GPIOB, SEG0_Pin | SEG1_Pin | SEG2_Pin | SEG3_Pin | SEG4_Pin | SEG5_Pin, GPIO_PIN_RESET);
+    break;
+  case 1: // Number 1: segments b c ON
+    HAL_GPIO_WritePin(GPIOB, SEG1_Pin | SEG2_Pin, GPIO_PIN_RESET);
+    break;
+  case 2: // Number 2: segments a b d e g ON
+    HAL_GPIO_WritePin(GPIOB, SEG0_Pin | SEG1_Pin | SEG3_Pin | SEG4_Pin | SEG6_Pin, GPIO_PIN_RESET);
+    break;
+  case 3: // Number 3: segments a b c d g ON
+    HAL_GPIO_WritePin(GPIOB, SEG0_Pin | SEG1_Pin | SEG2_Pin | SEG3_Pin | SEG6_Pin, GPIO_PIN_RESET);
+    break;
+  case 4: // Number 4: segments b c f g ON
+    HAL_GPIO_WritePin(GPIOB, SEG1_Pin | SEG2_Pin | SEG5_Pin | SEG6_Pin, GPIO_PIN_RESET);
+    break;
+  case 5: // Number 5: segments a c d f g ON
+    HAL_GPIO_WritePin(GPIOB, SEG0_Pin | SEG2_Pin | SEG3_Pin | SEG5_Pin | SEG6_Pin, GPIO_PIN_RESET);
+    break;
+  case 6: // Number 6: segments a c d e f g ON
+    HAL_GPIO_WritePin(GPIOB, SEG0_Pin | SEG2_Pin | SEG3_Pin | SEG4_Pin | SEG5_Pin | SEG6_Pin, GPIO_PIN_RESET);
+    break;
+  case 7: // Number 7: segments a b c ON
+    HAL_GPIO_WritePin(GPIOB, SEG0_Pin | SEG1_Pin | SEG2_Pin, GPIO_PIN_RESET);
+    break;
+  case 8: // Number 8: all segments ON
+    HAL_GPIO_WritePin(GPIOB, SEG0_Pin | SEG1_Pin | SEG2_Pin | SEG3_Pin | SEG4_Pin | SEG5_Pin | SEG6_Pin, GPIO_PIN_RESET);
+    break;
+  case 9: // Number 9: segments a b c d f g ON
+    HAL_GPIO_WritePin(GPIOB, SEG0_Pin | SEG1_Pin | SEG2_Pin | SEG3_Pin | SEG5_Pin | SEG6_Pin, GPIO_PIN_RESET);
+    break;
+  default: // Invalid input: show '-' using segment g
+    HAL_GPIO_WritePin(GPIOB, SEG6_Pin, GPIO_PIN_RESET);
+    break;
+  }
+}
+/*
+ * - Enables one of the two 7-segment digits.
+ * - Active-low control: ENx = 0 means enabled, ENx = 1 means disabled.
+ */
+void enableLED(int index)
+{
+  if (index == 0)
+  {     // Enable digit 0, Disable digit 1
+    HAL_GPIO_WritePin(GPIOA, EN0_Pin, GPIO_PIN_RESET); 
+    HAL_GPIO_WritePin(GPIOA, EN1_Pin, GPIO_PIN_SET);   
+  }
+  else if (index == 1)
+  {     // Disable digit 0, Enable digit 1
+    HAL_GPIO_WritePin(GPIOA, EN0_Pin, GPIO_PIN_SET);   
+    HAL_GPIO_WritePin(GPIOA, EN1_Pin, GPIO_PIN_RESET); 
+  }
+}
+
+volatile int currentLED = 0;
+
+/*
+ * HAL_TIM_PeriodElapsedCallback (triggered every 10 ms by TIM2).
+ * - Updates software timers by calling timerRun().
+ * - When timer 0 expires (every 500 ms), it toggles between two digits:
+ *   Digit 0 displays number 1
+ *   Digit 1 displays number 2
+ * - A debug LED is toggled at the same time.
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim->Instance == TIM2)
+  {
+    // Call software timer tick (executed every 10 ms)
+    timerRun();
+    if (isTimerExpired(0))
+    {
+      // Reload timer 0 for another 500 ms (50 x 10 ms)
+      setTimer(0, 50);
+
+      if (currentLED == 0)
+      {
+        // Activate digit 0 and display number 1
+        enableLED(0);
+        display7SEG(1);
+        currentLED = 1;   // Switch to digit 1 next time
+      }
+      else
+      {
+        // Activate digit 1 and display number 2
+        enableLED(1);
+        display7SEG(2);
+        currentLED = 0;   // Switch back to digit 0 next time
+      }
+
+      // Toggle the debug LED for status indication
+      HAL_GPIO_TogglePin(GPIOA, LED_RED_Pin);
+    }
+  }
+}
+
+\end{lstlisting}
+
+\textbf{Short question: } What is the frequency of the scanning process?\\
+
+In this exercise, the program is designed to alternately display number ``1'' on the first seven-segment LED 
+and number ``2'' on the second one. The switching time between two LEDs is given as \textbf{0.5 seconds}. 
+
+\begin{itemize}
+    \item The duration of one complete scanning cycle (LED1 $\rightarrow$ LED2 $\rightarrow$ LED1) is:
+    \[
+        T = 0.5 \,\text{s} + 0.5 \,\text{s} = 1 \,\text{s}
+    \]
+    \item The scanning frequency is therefore:
+    \[
+        f = \frac{1}{T} = \frac{1}{1 \,\text{s}} = 1 \,\text{Hz}
+    \]
+\end{itemize}
+
+The scanning frequency of the display process is \textbf{1 Hz}, 
+meaning the two digits are refreshed once every second.
+
+\newpage
+
+
+\subsection{Exercise 2}
+$\indent$Extend to 4 seven segment LEDs and two LEDs (connected to PA4, labeled as \textbf{DOT}) in the middle as following:
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=5.5in]{picture/bai_2/lab2_ex2a.PNG}
+    \vspace{0.5cm}
+    \caption{\textit{Simulation schematic in Proteus}}
+    \label{bai2_pic1a}
+\end{figure}
+
+Blink the two LEDs every second. Meanwhile, number 3 is displayed on the third seven segment and number 0 is displayed on the last one (to present 12 hour and a half). The switching time for each seven segment LED is also a half of second (500ms). \textbf{Implement your code in the timer interrupt function.}\\
+
+\textbf{\large[Report Solution]:}\\
+
+\textbf{Report 1: } Capture your schematic from Proteus and show in the report.
+
+The source code and Proteus schematic are provided at 
+\href{https://github.com/vophamk23/Microprocessor_Microcontroller_HCMUT/tree/main/STM32%20LAB%202%20-%20TIMER%20INTERRUPT%20and%20LED%20SCANNING/EX2_Four7SEG_DOTBlink}{STM32 Lab 2: Four7SEG DOTBlink}\label{link:proteus_repo}.
+\renewcommand{\figurename}{Figure}
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=13cm]{picture/bai_2/LAB2_EX2.png}
+     \vspace{0.5cm}
+    \caption{\textit{Proteus Ex2 Four7SEG DOT Blink}}
+    \label{bai1_pic1}
+\end{figure}
+
+
+\textbf{Report 2: } Present your source code in the \textbf{HAL\_TIM\_PeriodElapsedCallback} function.
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+void enableLED(int index)
+{      // Turn OFF all LEDs first
+  HAL_GPIO_WritePin(GPIOA, EN0_Pin | EN1_Pin | EN2_Pin | EN3_Pin, GPIO_PIN_SET);    
+  switch (index)
+  {
+  case 0:   // Enable digit 0
+    HAL_GPIO_WritePin(GPIOA, EN0_Pin, GPIO_PIN_RESET); 
+    break;
+  case 1:   // Enable digit 1
+    HAL_GPIO_WritePin(GPIOA, EN1_Pin, GPIO_PIN_RESET); 
+    break;
+  case 2:   // Enable digit 2
+    HAL_GPIO_WritePin(GPIOA, EN2_Pin, GPIO_PIN_RESET); 
+    break;
+  case 3:   // Enable digit 3
+    HAL_GPIO_WritePin(GPIOA, EN3_Pin, GPIO_PIN_RESET); 
+    break;
+  default:
+    break;
+  }
+}
+
+int currentLED = 0;  // Current active digit index 
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim->Instance == TIM2)
+  {     timerRun();       // Update software timers (tick = 10 ms)
+    if (isTimerExpired(0))  // Scan 4 digits every 500 ms
+    {
+      setTimer(0, 50); 
+      switch (currentLED)
+      {
+      case 0: // Digit 0 shows "1"
+          enableLED(0); 
+          display7SEG(1); 
+          break; 
+      case 1: // Digit 1 shows "2"
+          enableLED(1); 
+          display7SEG(2); 
+          break; 
+      case 2: // Digit 2 shows "3"
+          enableLED(2); 
+          display7SEG(3); 
+          break; 
+      case 3: // Digit 3 shows "0"
+          enableLED(3); 
+          display7SEG(0); 
+          break; 
+      default:  // Error case, show "-"
+          enableLED(currentLED);
+          display7SEG(10);  
+          break;
+      }
+      currentLED++;
+      if (currentLED >= 4) currentLED = 0; // Wrap back to digit 0
+    }
+    // Toggle DOT LED every 1 second
+    if (isTimerExpired(1))
+    {
+      setTimer(1, 100); 
+      HAL_GPIO_TogglePin(GPIOA, DOT_Pin);
+    }
+    // Toggle RED LED every 500 ms
+    if (isTimerExpired(2))
+    {
+      setTimer(2, 50); 
+      HAL_GPIO_TogglePin(GPIOA, LED_RED_Pin);
+    }
+  }
+}
+
+\end{lstlisting}
+
+\textbf{Short question: } What is the frequency of the scanning process?\\
+
+The program is configured to switch between the four 7-segment digits every 
+\textbf{0.5 seconds}. Therefore, one complete scanning cycle 
+(digit 0 $\rightarrow$ digit 1 $\rightarrow$ digit 2 $\rightarrow$ digit 3 $\rightarrow$ digit 0) takes:
+\[
+T = 4 \times 0.5 \,\text{s} = 2 \,\text{s}
+\]
+
+The scanning frequency is calculated as:
+\[
+f = \frac{1}{T} = \frac{1}{2 \,\text{s}} = 0.5 \,\text{Hz}
+\]
+
+The scanning frequency of the 4-digit display is \textbf{0.5 Hz}, meaning the system refreshes the entire set of digits once every 2 seconds.
+
+\subsection{Exercise 3}
+$\indent$Implement a function named \textbf{update7SEG(int index)}. An array of 4 integer numbers are declared in this case. The code skeleton in this exercise is presented as following:
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+const int MAX_LED = 4;
+int index_led = 0;
+int led_buffer[4] = {1, 2, 3, 4};
+void update7SEG(int index){
+    switch (index){
+        case 0:
+            //Display the first 7SEG with led_buffer[0]
+            break;
+        case 1:
+            //Display the second 7SEG with led_buffer[1]
+            break;
+        case 2:
+            //Display the third 7SEG with led_buffer[2]
+            break;
+        case 3:
+            //Display the forth 7SEG with led_buffer[3]
+            break;
+        default:
+            break;
+    }
+}
+\end{lstlisting}
+
+This function should be invoked in the timer interrupt, e.g update7SEG(index\_led++). The variable \textbf{index\_led} is updated to stay in a valid range, which is from 0 to 3.
+
+\textbf{\large[Report Solution]:}\\
+
+\textbf{Report 1: } Present the source code of the update7SEG function. \\
+
+The source code and Proteus simulation schematic are provided at 
+\href{https://github.com/vophamk23/Microprocessor_Microcontroller_HCMUT/tree/main/STM32%20LAB%202%20-%20TIMER%20INTERRUPT%20and%20LED%20SCANNING/EX3_4__Frequency1Hz}{STM32 Lab 2: Update7SEG}\label{link:proteus_repo}.
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+const int MAX_LED = 4;               // Number of 7-segment LEDs
+int index_led = 0;                   // Current scanning index
+int led_buffer[4] = {1, 2, 3, 4};    // Values for each LED
+
+// Update one LED with value from buffer 
+void update7SEG(int index)
+{
+  switch (index)
+  {
+  case 0: 
+      enableLED(0); 
+      display7SEG(led_buffer[0]); 
+      break;
+  case 1: 
+      enableLED(1); 
+      display7SEG(led_buffer[1]); 
+      break;
+  case 2: 
+      enableLED(2); 
+      display7SEG(led_buffer[2]); 
+      break;
+  case 3: 
+      enableLED(3); 
+      display7SEG(led_buffer[3]); 
+      break;
+  default: 
+      HAL_GPIO_WritePin(GPIOA, EN0_Pin|EN1_Pin|EN2_Pin|EN3_Pin,  GPIO_PIN_SET); 
+      break;
+  }
+}
+
+void scanLED()
+{
+  update7SEG(index_led);  // Update current LED
+  index_led++;
+  if (index_led >= MAX_LED) index_led = 0; // Wrap back
+}
+\end{lstlisting}
+
+\textbf{Report 2: } Present the source code in the HAL\_TIM\_PeriodElapsedCallback.
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim->Instance == TIM2)
+  {
+    timerRun(); // Update software timers
+
+    // Scan 7-segment LEDs every 500 ms (EX3) 
+    if (isTimerExpired(0))
+    {
+      setTimer(0, 50);    
+      scanLED();
+    }
+
+    // Toggle DOT LED every 1s
+    if (isTimerExpired(1))
+    {
+      setTimer(1, 100);   
+      HAL_GPIO_TogglePin(GPIOA, DOT_Pin);
+    }
+    // Toggle RED LED every 500 ms
+    if (isTimerExpired(2))
+    {
+      setTimer(2, 50);    
+      HAL_GPIO_TogglePin(GPIOA, LED_RED_Pin);
+    }
+  }
+}
+\end{lstlisting}
+
+Students are proposed to change the values in the \textbf{led\_buffer} array for unit test this function, which is used afterward.
+
+\subsection{Exercise 4}
+$\indent$Change the period of invoking update7SEG function in order to set the frequency of 4 seven segment LEDs to 1Hz. The DOT is still blinking every second.\\
+
+\textbf{\large[Report Solution]:}\\
+
+\textbf{Report 1: } Present the source code in the \textbf{HAL\_TIM\_PeriodElapsedCallback}. 
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]\
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim->Instance == TIM2)
+  {
+    // Run software timers every 10ms
+    timerRun();
+
+    // Scan 7-segment LEDs every 250ms (EX4) - 1s for 4 LED
+    if (isTimerExpired(0))
+    {
+      setTimer(0, 25);      
+      scanLED();   // Update current 7-segment LED
+    }
+
+    // Toggle dot LED every 1s
+    if (isTimerExpired(1))
+    {
+      setTimer(1, 100);   
+      HAL_GPIO_TogglePin(GPIOA, DOT_Pin);
+    }
+
+    // Toggle red LED every 500ms
+    if (isTimerExpired(2))
+    {
+      setTimer(2, 50);   
+      HAL_GPIO_TogglePin(GPIOA, LED_RED_Pin);
+    }
+  }
+}
+
+\end{lstlisting}
+
+\subsection{Exercise 5}
+$\indent$Implement a digital clock with \textbf{hour} and \textbf {minute} information displayed by 2 seven segment LEDs. The code skeleton in the \textbf{main} function is presented as follows:
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+int hour = 15, minute = 8, second = 50;
+
+while(1){
+    second++;
+    if (second >= 60){
+        second = 0;
+        minute++;
+    }
+    if(minute >= 60){
+        minute = 0;
+        hour++;
+    }
+    if(hour >=24){
+        hour = 0;
+    }
+    updateClockBuffer();
+    HAL_Delay(1000);
+}
+\end{lstlisting}
+
+
+The function \textbf{updateClockBuffer} will generate values for the array \textbf{led\_buffer} according to the values of hour and minute. In the case these values are 1 digit number, digit 0 is added. \\
+
+\textbf{\large[Report Solution]:}\\
+
+\textbf{Report 1: } Present the source code in the \textbf{updateClockBuffer} function.\\
+
+The source code and Proteus simulation schematic are provided at 
+\href{https://github.com/vophamk23/Microprocessor_Microcontroller_HCMUT/tree/main/STM32%20LAB%202%20-%20TIMER%20INTERRUPT%20and%20LED%20SCANNING/EX5_6_DigitalClock}{STM32 Lab 2: DigitalClock}\label{link:proteus_repo}.\\
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+// Update the 7-segment buffer with the current time
+void updateClockBuffer(void) {
+    led_buffer[0] = hour / 10;   // Tens digit of hour (1 in 15)
+    led_buffer[1] = hour % 10;   // Units digit of hour (5 in 15)
+    led_buffer[2] = minute / 10; // Tens digit of minute (0 in 08)
+    led_buffer[3] = minute % 10; // Units digit of minute (8 in 08)
+    // Example result: display "1508" on 4-digit 7-segment display
+}
+\end{lstlisting}
+
+\subsection{Exercise 6}
+$\indent$The main target from this exercise to reduce the complexity (or reduce code processing) in the timer interrupt. The time consumed in the interrupt can lead to the nested interrupt issue, which can crash the whole system. A simple solution can disable the timer whenever the interrupt occurs, the enable it again. However, the real-time processing is not guaranteed anymore.\\
+
+In this exercise, a software timer is created and its counter is count down every timer interrupt is raised (every 10ms). By using this timer, the \textbf{Hal\_Delay(1000)} in the main function is removed. In a MCU system, non-blocking delay is better than blocking delay. The details to create a software timer are presented bellow. The source code is added to your current program, \textbf{do not delete the source code you have on Exercise 5.}\\
+
+\textbf{Step 1: } Declare variables and functions for a software timer, as following:
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=Software timer based timer interrupt]
+/* USER CODE BEGIN 0 */
+int timer0_counter = 0;
+int timer0_flag = 0;
+int TIMER_CYCLE = 10;
+void setTimer0(int duration){
+	timer0_counter = duration /TIMER_CYCLE;
+	timer0_flag = 0;
+}
+void timer_run(){
+	if(timer0_counter > 0){
+		timer0_counter--;
+		if(timer0_counter == 0) timer0_flag = 1;
+	}
+}
+/* USER CODE END 0 */
+\end{lstlisting}
+
+Please change the \textbf{TIMER\_CYCLE} to your timer interrupt period. In the manual code above, it is \textbf{10ms}. \\
+
+\textbf{Step 2: } The \textbf{timer\_run()} is invoked in the timer interrupt as following:
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=Software timer based timer interrupt]
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	
+	timer_run();
+	
+	//YOUR OTHER CODE
+}
+\end{lstlisting}
+
+\textbf{Step 3: } Use the timer in the main function by invoked setTimer0 function, then check for its flag (timer0\_flag). An example to blink an LED connected to PA5 using software timer is shown as follows:
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=Software timer is used in main fuction to blink the LED]
+setTimer0(1000);
+while (1){
+    if(timer0_flag == 1){
+        HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
+        setTimer0(2000);
+    }
+}
+\end{lstlisting}
+
+\textbf{\large[Report Solution]:}
+
+In microcontroller systems, to avoid using blocking delay functions (e.g., \texttt{HAL\_Delay}), a software timer is implemented based on periodic interrupts. The mechanism works as follows:
+
+\begin{enumerate}
+    \item The hardware timer is configured to generate an interrupt every \\texttt{TIMER\_CYCLE} milliseconds (e.g., 10 ms).
+    \item When \texttt{setTimer0(duration)} is called, the variable \texttt{timer0\_counter} is assigned the value \texttt{(duration / TIMER\_CYCLE)}, and the flag \texttt{timer0\_flag} is reset.
+    \item At each timer interrupt, the function \texttt{timer\_run()} decreases \texttt{timer0\_counter}. When the counter reaches zero, \texttt{timer0\_flag} is set to 1 to signal that the time event has occurred.
+    \item In the main loop, the program checks \texttt{timer0\_flag}. When this flag is set, the required action (e.g., toggling an LED) is executed, and the timer can be reinitialized if needed.
+\end{enumerate}
+
+By using this mechanism, the main program is no longer blocked by \textbf{HAL\_Delay}, resulting in non-blocking execution and improved real-time responsiveness.\\
+
+\textbf{\normalsize Report 1: Omitting \texttt{setTimer0(1000)} - line 1 of the code above is miss.}\\
+
+If the timer is not initialized by \texttt{setTimer0(1000)}, the variable \texttt{timer0\_counter} keeps its default value of 0. In this case, inside the timer interrupt, the condition \texttt{if (timer0\_counter > 0)} will never be true, so \texttt{timer0\_flag} will never be set to 1. As a result, in the main loop, the condition \texttt{if (timer0\_flag == 1)} is never satisfied, and the LED will not blink.\\
+
+\textbf{Reason:} No counter is initialized, so the software timer never generates an event.\\
+
+\textbf{\normalsize Report 2: Replacing \texttt{setTimer0(1000);} with \texttt{setTimer0(1);}}\\
+
+When \texttt{setTimer0(1);} is called, the value of \texttt{timer0\_counter} is calculated as $1 / 10 = 0$ (due to integer division in C). Thus, the counter immediately becomes 0, and \texttt{timer0\_flag} is never set. In subsequent calls to \texttt{timer\_run()}, the counter remains 0, and no event is generated. Consequently, the LED never changes its state. \\ 
+
+\textbf{Reason:} The configured duration (1 ms) is smaller than the interrupt cycle (10 ms). Integer division truncates the result to 0, so the timer never works.
+
+\textbf{\normalsize Report 3: Replacing \texttt{setTimer0(1000);} with \texttt{setTimer0(10);}}\\
+
+In this case, \texttt{timer0\_counter} is assigned $10 / 10 = 1$. After one timer interrupt (i.e., 10 ms), \texttt{timer\_run()} decreases the counter to 0 and sets \texttt{timer0\_flag = 1}. At this moment, the main loop detects the event and toggles the LED.  
+
+\textbf{Result:} The LED will blink every 10 ms. 
+
+\textbf{Difference:} Unlike Report 1 and Report 2, here the counter is initialized with a valid value (1), so the event is properly generated.\\
+
+\textbf{\normalsize Comparison of the Three Cases:}
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Case} & \textbf{Duration input} & \textbf{Counter value} & \textbf{Event (flag)} & \textbf{LED status} \\
+\hline
+Report 1 (no \texttt{set}) & --- & 0 (default) & Never & LED unchanged \\
+\hline
+Report 2 (\texttt{setTimer0(1)}) & 1 ms & 0 & Never & LED unchanged \\
+\hline
+Report 3 (\texttt{setTimer0(10)}) & 10 ms & 1 & After 10 ms & LED blinks \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{\normalsize Conclusion and Recommendation:}
+\begin{itemize}
+    \item Initializing the timer with \texttt{setTimer0()} is mandatory for the software timer to operate.
+    \item If the duration parameter is smaller than the interrupt cycle (\texttt{TIMER\_CYCLE}), integer division will yield 0, preventing the timer from generating events.
+    \item When the parameter is an exact multiple of the cycle (e.g., \texttt{setTimer0(10)} with \texttt{TIMER\_CYCLE = 10}), the counter is valid, and the event is triggered at the expected time.
+\end{itemize}
+
+This solution enables a non-blocking delay mechanism, ensures real-time performance, and reduces the risk of nested interrupts in embedded systems
+
+\subsection{Exercise 7}
+$\indent$Upgrade the source code in Exercise 5 (update values for hour, minute and second) by using the software timer and remove the HAL\_Delay function at the end. Moreover, the DOT (connected to PA4) of the digital clock is also moved to main function. \\
+
+\textbf{\large[Report Solution]:}\\
+
+\textbf{Report 1: } Present your source code in the while loop on main function.\\
+
+The source code and Proteus schematic are provided at 
+\href{https://github.com/vophamk23/Microprocessor_Microcontroller_HCMUT/tree/main/STM32%20LAB%202%20-%20TIMER%20INTERRUPT%20and%20LED%20SCANNING/EX7_DigitalClock_NoDelay}{STM32 Lab 2: DigitalClock NoDelay}\label{link:proteus_repo}.
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+HAL_TIM_Base_Start_IT(&htim2);
+while (1)
+{   // Timer 1: toggle DOT LED every 0.5 second
+    if (isTimerExpired(1))
+    {
+        setTimer(1, 50);          // 50 * 10ms = 500ms = 0.5s
+        HAL_GPIO_TogglePin(GPIOA, DOT_Pin); // Toggle DOT LED
+    }
+    // Timer 3: update clock every 1 second
+    if (isTimerExpired(3))
+    {
+        // Increase second and handle overflow
+        second++;
+        if (second >= 60) {  // If second reaches 60
+            second = 0;      // Reset second
+            minute++;        // Increase minute
+        }
+        if (minute >= 60) {  // If minute reaches 60
+            minute = 0;      // Reset minute
+            hour++;          // Increase hour
+        }
+        if (hour >= 24) {    // If hour reaches 24
+            hour = 0;        // Reset hour to 0 (new day)
+        }
+        updateClockBuffer(); // Update 7 segment buffer
+        setTimer(3, 100);    // 100 * 10ms = 1s
+    }
+}
+
+\end{lstlisting}
+
+\subsection{Exercise 8}
+$\indent$Move also the update7SEG() function from the interrupt  timer to the main. Finally, the timer interrupt only used to handle  software timers. All processing (or complex computations) is move to an infinite loop on the main function, optimizing the complexity of the interrupt  handler function.\\
+
+\textbf{\large[Report Solution]:}\\
+
+\textbf{Report 1: } Present your source code in the the main function. In the case more extra functions are used (e.g. the second software timer), present them in the report as well.\\
+
+The source code and Proteus simulation schematic are provided at 
+\href{https://github.com/vophamk23/Microprocessor_Microcontroller_HCMUT/tree/main/STM32%20LAB%202%20-%20TIMER%20INTERRUPT%20and%20LED%20SCANNING/EX8_DigitalClock_Final}{STM32 Lab 2: DigitalClock Final}\label{link:proteus_repo}.
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+// Enable timer interrupt after initialization
+HAL_TIM_Base_Start_IT(&htim2);
+while (1)
+{    // Timer 0: scan 7 segment LEDs every 250 ms for smooth display
+    if (isTimerExpired(0))
+    {
+        setTimer(0, 25);        // 25 * 10 ms = 250 ms
+        scanLED();              // Scan through all 7 segment LEDs
+    }
+    // Timer 1: toggle DOT LED every 0.5 second
+    if (isTimerExpired(1))
+    {
+        setTimer(1, 50);        // 50 * 10 ms = 500 ms
+        HAL_GPIO_TogglePin(GPIOA, DOT_Pin);
+    }
+    // Timer 2: toggle RED LED every 0.25 second
+    if (isTimerExpired(2))
+    {
+        setTimer(2, 25);        // 25 * 10 ms = 250 ms
+        HAL_GPIO_TogglePin(GPIOA, LED_RED_Pin);
+    }
+    // Timer 3: update clock every 1 second
+    if (isTimerExpired(3))
+    {   // Increase time and handle overflow
+        second++;
+        if (second >= 60) {
+            second = 0;
+            minute++;
+        }
+        if (minute >= 60) {
+            minute = 0;
+            hour++;
+        }
+        if (hour >= 24) {
+            hour = 0;   // Reset hour when a new day starts
+        }
+        updateClockBuffer();    // Update 7 segment buffer
+        setTimer(3, 100);       // 100 * 10 ms = 1 second
+    }
+}
+
+\end{lstlisting}
+\subsection{Exercise 9}
+
+$\indent$This is an extra works for this lab. A LED Matrix is added to the system. A reference design is shown in figure bellow:
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=5.5in]{picture/bai_2/lab2_m4.PNG}
+    \vspace{0.5cm}
+    \caption{\textit{LED matrix is added to the simulation}}
+    \label{bai2_pic9}
+\end{figure}
+
+In this schematic, two new components are added, including the \textbf{MATRIX-8X8-RED} and \textbf{ULN2803}, which is an NPN transistor array to enable the power supply for a column of the LED matrix. Students can change the enable signal (from ENM0 to  ENM7) if needed. Finally, the data signal (from ROW0 to ROW7) is connected to PB8 to PB15. \\
+
+\textbf{Report 1: } Present the schematic of your system by capturing the screen in Proteus.\\
+
+\textbf{Report 2: } Implement the function, updateLEDMatrix(int index), which is similarly  to 4 seven led segments.
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=Function to display data on LED Matrix]
+const int MAX_LED_MATRIX = 8;
+int index_led_matrix = 0;
+uint8_t matrix_buffer[8] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+void updateLEDMatrix(int index){
+    switch (index){
+        case 0:
+            break;
+        case 1:
+            break;
+        case 2:
+            break;
+        case 3:
+            break;
+        case 4:
+            break;
+        case 5:
+            break;
+        case 6:
+            break;
+        case 7:
+            break;
+        default:
+            break;
+    }
+}
+\end{lstlisting}
+
+Student are free to choose the invoking frequency of this function. However, this function is supposed to invoked in main function. Finally, please update the \textbf{matrix\_buffer} to display character \textbf{"A"}.\\
+
+\textbf{\large[Report Solution]:}\\
+
+\textbf{Report 1: } Present the schematic of your system by capturing the screen in Proteus.\\
+
+The source code and Proteus schematic are provided at 
+\href{https://github.com/vophamk23/Microprocessor_Microcontroller_HCMUT/tree/main/STM32%20LAB%202%20-%20TIMER%20INTERRUPT%20and%20LED%20SCANNING/EX9_LEDMatrix_DisplayA}{STM32 Lab 2: LEDMatrix DisplayA}\label{link:proteus_repo}.
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=15cm]{picture/bai_2/LAB2_EX9.png}
+    \vspace{0.5cm}
+    \caption{\textit{Proteus EX9 LED Matrix DisplayA}}
+    \label{bai2_pic9}
+\end{figure}
+
+\textbf{Report 2: } Implement the function, updateLEDMatrix(int index), which is similarly  to 4 seven led segments.
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+/* ===== PART 1: GLOBAL VARIABLES FOR 7-SEGMENT CLOCK ===== */
+const int MAX_LED = 4;                // Four 7-segment LEDs 
+int index_led = 0;                    // Current active LED 
+int hour = 15, minute = 8, second = 50; // Initial time 15:08:50
+int led_buffer[4] = {0, 0, 0, 0};      
+                                                 
+/* ===== PART 2: GLOBAL VARIABLES FOR 8x8 LED MATRIX ===== */
+const int MAX_LED_MATRIX = 8; // Matrix has 8 rows
+int index_led_matrix = 0;     // Current active row (0 to 7)
+
+// Pattern to display letter "A" on LED Matrix 8x8
+// Each byte represents one row, each bit represents one LED
+uint8_t matrix_buffer[8] = {
+    0x18, // 00011000 - Top of A
+    0x24, // 00100100 - Upper diagonal
+    0x42, // 01000010 - Side parts of A
+    0x42, // 01000010 - Side parts of A
+    0x7E, // 01111110 - Middle horizontal bar
+    0x42, // 01000010 - Side parts of A
+    0x42, // 01000010 - Side parts of A
+    0x42  // 01000010 - Bottom of A
+};
+
+/* ===== PART 3: FUNCTIONS FOR LED MATRIX CONTROL ===== */
+GPIO_PinState getBitState(uint8_t hexa, int index)
+{   // Temporary array to hold bits
+  int arr[8] = {0, 0, 0, 0, 0, 0, 0, 0}; 
+  // Convert hex number into bits
+  for (int i = 7; i >= 0; --i)
+  {
+    int mod = hexa % 2;  // Get last bit
+    hexa = hexa / 2;     // Shift right
+    arr[i] = mod;        // Save bit
+  }
+  // Return bit state
+  if (arr[index] == 1)
+    return GPIO_PIN_SET;   // Bit = 1, LED ON
+  return GPIO_PIN_RESET;   // Bit = 0, LED OFF
+}
+
+// Update column data for selected row
+void updateLEDMatrix(int index)
+{
+  switch (index)
+  {
+  case 0: // Row 0
+    HAL_GPIO_WritePin(GPIOA, ENM0_Pin, getBitState(matrix_buffer[0], 0));
+    HAL_GPIO_WritePin(GPIOA, ENM1_Pin, getBitState(matrix_buffer[0], 1));
+    HAL_GPIO_WritePin(GPIOA, ENM2_Pin, getBitState(matrix_buffer[0], 2));
+    HAL_GPIO_WritePin(GPIOA, ENM3_Pin, getBitState(matrix_buffer[0], 3));
+    HAL_GPIO_WritePin(GPIOA, ENM4_Pin, getBitState(matrix_buffer[0], 4));
+    HAL_GPIO_WritePin(GPIOA, ENM5_Pin, getBitState(matrix_buffer[0], 5));
+    HAL_GPIO_WritePin(GPIOA, ENM6_Pin, getBitState(matrix_buffer[0], 6));
+    HAL_GPIO_WritePin(GPIOA, ENM7_Pin, getBitState(matrix_buffer[0], 7));
+    break;
+    
+  case 1: // Row 1
+    HAL_GPIO_WritePin(GPIOA, ENM0_Pin, getBitState(matrix_buffer[1], 0));
+    HAL_GPIO_WritePin(GPIOA, ENM1_Pin, getBitState(matrix_buffer[1], 1));
+    HAL_GPIO_WritePin(GPIOA, ENM2_Pin, getBitState(matrix_buffer[1], 2));
+    HAL_GPIO_WritePin(GPIOA, ENM3_Pin, getBitState(matrix_buffer[1], 3));
+    HAL_GPIO_WritePin(GPIOA, ENM4_Pin, getBitState(matrix_buffer[1], 4));
+    HAL_GPIO_WritePin(GPIOA, ENM5_Pin, getBitState(matrix_buffer[1], 5));
+    HAL_GPIO_WritePin(GPIOA, ENM6_Pin, getBitState(matrix_buffer[1], 6));
+    HAL_GPIO_WritePin(GPIOA, ENM7_Pin, getBitState(matrix_buffer[1], 7));
+    break;
+    
+  case 2: // Row 2
+    HAL_GPIO_WritePin(GPIOA, ENM0_Pin, getBitState(matrix_buffer[2], 0));
+    HAL_GPIO_WritePin(GPIOA, ENM1_Pin, getBitState(matrix_buffer[2], 1));
+    HAL_GPIO_WritePin(GPIOA, ENM2_Pin, getBitState(matrix_buffer[2], 2));
+    HAL_GPIO_WritePin(GPIOA, ENM3_Pin, getBitState(matrix_buffer[2], 3));
+    HAL_GPIO_WritePin(GPIOA, ENM4_Pin, getBitState(matrix_buffer[2], 4));
+    HAL_GPIO_WritePin(GPIOA, ENM5_Pin, getBitState(matrix_buffer[2], 5));
+    HAL_GPIO_WritePin(GPIOA, ENM6_Pin, getBitState(matrix_buffer[2], 6));
+    HAL_GPIO_WritePin(GPIOA, ENM7_Pin, getBitState(matrix_buffer[2], 7));
+    break;
+    
+  case 3: // Row 3
+    HAL_GPIO_WritePin(GPIOA, ENM0_Pin, getBitState(matrix_buffer[3], 0));
+    HAL_GPIO_WritePin(GPIOA, ENM1_Pin, getBitState(matrix_buffer[3], 1));
+    HAL_GPIO_WritePin(GPIOA, ENM2_Pin, getBitState(matrix_buffer[3], 2));
+    HAL_GPIO_WritePin(GPIOA, ENM3_Pin, getBitState(matrix_buffer[3], 3));
+    HAL_GPIO_WritePin(GPIOA, ENM4_Pin, getBitState(matrix_buffer[3], 4));
+    HAL_GPIO_WritePin(GPIOA, ENM5_Pin, getBitState(matrix_buffer[3], 5));
+    HAL_GPIO_WritePin(GPIOA, ENM6_Pin, getBitState(matrix_buffer[3], 6));
+    HAL_GPIO_WritePin(GPIOA, ENM7_Pin, getBitState(matrix_buffer[3], 7));
+    break;
+    
+  case 4: // Row 4
+    HAL_GPIO_WritePin(GPIOA, ENM0_Pin, getBitState(matrix_buffer[4], 0));
+    HAL_GPIO_WritePin(GPIOA, ENM1_Pin, getBitState(matrix_buffer[4], 1));
+    HAL_GPIO_WritePin(GPIOA, ENM2_Pin, getBitState(matrix_buffer[4], 2));
+    HAL_GPIO_WritePin(GPIOA, ENM3_Pin, getBitState(matrix_buffer[4], 3));
+    HAL_GPIO_WritePin(GPIOA, ENM4_Pin, getBitState(matrix_buffer[4], 4));
+    HAL_GPIO_WritePin(GPIOA, ENM5_Pin, getBitState(matrix_buffer[4], 5));
+    HAL_GPIO_WritePin(GPIOA, ENM6_Pin, getBitState(matrix_buffer[4], 6));
+    HAL_GPIO_WritePin(GPIOA, ENM7_Pin, getBitState(matrix_buffer[4], 7));
+    break;
+  case 5: // Row 5
+    HAL_GPIO_WritePin(GPIOA, ENM0_Pin, getBitState(matrix_buffer[5], 0));
+    HAL_GPIO_WritePin(GPIOA, ENM0_Pin, getBitState(matrix_buffer[5], 0));
+    HAL_GPIO_WritePin(GPIOA, ENM1_Pin, getBitState(matrix_buffer[5], 1));
+    HAL_GPIO_WritePin(GPIOA, ENM2_Pin, getBitState(matrix_buffer[5], 2));
+    HAL_GPIO_WritePin(GPIOA, ENM3_Pin, getBitState(matrix_buffer[5], 3));
+    HAL_GPIO_WritePin(GPIOA, ENM4_Pin, getBitState(matrix_buffer[5], 4));
+    HAL_GPIO_WritePin(GPIOA, ENM5_Pin, getBitState(matrix_buffer[5], 5));
+    HAL_GPIO_WritePin(GPIOA, ENM6_Pin, getBitState(matrix_buffer[5], 6));
+    HAL_GPIO_WritePin(GPIOA, ENM7_Pin, getBitState(matrix_buffer[5], 7));
+    break;
+  case 6: // Row 6
+    HAL_GPIO_WritePin(GPIOA, ENM0_Pin, getBitState(matrix_buffer[6], 0));
+    HAL_GPIO_WritePin(GPIOA, ENM1_Pin, getBitState(matrix_buffer[6], 1));
+    HAL_GPIO_WritePin(GPIOA, ENM2_Pin, getBitState(matrix_buffer[6], 2));
+    HAL_GPIO_WritePin(GPIOA, ENM3_Pin, getBitState(matrix_buffer[6], 3));
+    HAL_GPIO_WritePin(GPIOA, ENM4_Pin, getBitState(matrix_buffer[6], 4));
+    HAL_GPIO_WritePin(GPIOA, ENM5_Pin, getBitState(matrix_buffer[6], 5));
+    HAL_GPIO_WritePin(GPIOA, ENM6_Pin, getBitState(matrix_buffer[6], 6));
+    HAL_GPIO_WritePin(GPIOA, ENM7_Pin, getBitState(matrix_buffer[6], 7));
+    break;
+  case 7: // Row 7
+    HAL_GPIO_WritePin(GPIOA, ENM0_Pin, getBitState(matrix_buffer[7], 0));
+    HAL_GPIO_WritePin(GPIOA, ENM1_Pin, getBitState(matrix_buffer[7], 1));
+    HAL_GPIO_WritePin(GPIOA, ENM2_Pin, getBitState(matrix_buffer[7], 2));
+    HAL_GPIO_WritePin(GPIOA, ENM3_Pin, getBitState(matrix_buffer[7], 3));
+    HAL_GPIO_WritePin(GPIOA, ENM4_Pin, getBitState(matrix_buffer[7], 4));
+    HAL_GPIO_WritePin(GPIOA, ENM5_Pin, getBitState(matrix_buffer[7], 5));
+    HAL_GPIO_WritePin(GPIOA, ENM6_Pin, getBitState(matrix_buffer[7], 6));
+    HAL_GPIO_WritePin(GPIOA, ENM7_Pin, getBitState(matrix_buffer[7], 7));
+    break;
+  default:
+    break;
+  }
+}
+
+// Scan LED matrix rows
+void scanLEDMatrix()
+{
+  switch (index_led_matrix)
+  {
+  case 0: // Enable row 0
+    HAL_GPIO_WritePin(GPIOB, ROW7_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, ROW0_Pin, GPIO_PIN_SET);
+    break;
+  case 1: // Enable row 1
+    HAL_GPIO_WritePin(GPIOB, ROW0_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, ROW1_Pin, GPIO_PIN_SET);
+    break;
+  case 2: // Enable row 2
+    HAL_GPIO_WritePin(GPIOB, ROW1_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, ROW2_Pin, GPIO_PIN_SET);
+    break;
+  case 3: // Enable row 3
+    HAL_GPIO_WritePin(GPIOB, ROW2_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, ROW3_Pin, GPIO_PIN_SET);
+    break;
+  case 4: // Enable row 4
+    HAL_GPIO_WritePin(GPIOB, ROW3_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, ROW4_Pin, GPIO_PIN_SET);
+    break;
+  case 5: // Enable row 5
+    HAL_GPIO_WritePin(GPIOB, ROW4_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, ROW5_Pin, GPIO_PIN_SET);
+    break;
+  case 6: // Enable row 6
+    HAL_GPIO_WritePin(GPIOB, ROW5_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, ROW6_Pin, GPIO_PIN_SET);
+    break;
+  case 7: // Enable row 7
+    HAL_GPIO_WritePin(GPIOB, ROW6_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, ROW7_Pin, GPIO_PIN_SET);
+    break;
+  default:
+    break;
+  }
+  // Update active row data
+  updateLEDMatrix(index_led_matrix);
+  // Move to next row
+  index_led_matrix++;
+  if (index_led_matrix >= MAX_LED_MATRIX)
+  {
+    index_led_matrix = 0; // Back to row 0
+  }
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim->Instance == TIM2)
+  {
+    // Update all software timers every 10ms
+    timerRun();
+    // --- TIMER 0: Scan 7-seg display ---
+    if (isTimerExpired(0))
+    {
+      setTimer(0, 25); // 250ms
+      scanLED();
+    }
+    // --- TIMER 1: Blink dot (:) ---
+    if (isTimerExpired(1))
+    {
+      setTimer(1, 50); // 750ms
+      HAL_GPIO_TogglePin(GPIOA, DOT_Pin);
+    }
+    // --- TIMER 2: Blink red LED ---
+    if (isTimerExpired(2))
+    {
+      setTimer(2, 50); // 500ms
+      HAL_GPIO_TogglePin(GPIOA, LED_RED_Pin);
+    }
+    // --- TIMER 3: Update clock time ---
+    if (isTimerExpired(3))
+    {
+      second++;
+      if (second >= 60) {
+          second = 0; 
+          minute++; 
+      }
+      if (minute >= 60) { 
+          minute = 0; 
+          hour++; 
+      }
+      if (hour >= 24) { 
+          hour = 0; 
+          }
+      updateClockBuffer();
+      setTimer(3, 100); // 1s
+    }
+  }
+  // --- TIMER 4: Scan LED matrix ---
+  if (isTimerExpired(4))
+  {
+    setTimer(4, 10); // 100ms
+    scanLEDMatrix();
+  }
+}
+
+\end{lstlisting}
+
+\subsection{Exercise 10}
+$\indent$Create an animation on LED matrix, for example, the character is shifted to the left. \\
+
+\textbf{\large[Report Solution]:}\\
+
+\textbf{Report 1: } Briefly describe your solution and present your source code in the report.\\
+
+The source code and Proteus schematic are provided at 
+\href{https://github.com/vophamk23/Microprocessor_Microcontroller_HCMUT/tree/main/STM32%20LAB%202%20-%20TIMER%20INTERRUPT%20and%20LED%20SCANNING/EX10_LEDMatrix_Animation}{STM32 Lab 2: LEDMatrix Animation}\label{link:proteus_repo}.
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+/* ===== PART 1: GLOBAL VARIABLES FOR 7-SEGMENT CLOCK ===== */
+const int MAX_LED = 4;                  // 4 seven-segment LEDs
+int index_led = 0;                      // Current LED index (0-3)
+int hour = 15, minute = 8, second = 50; // Initial time: 15:08:50
+int led_buffer[4] = {0, 0, 0, 0};       // Display buffer for 4 LEDs
+
+/* ===== PART 2: GLOBAL VARIABLES FOR 8x8 LED MATRIX ===== */
+const int MAX_LED_MATRIX = 8; // 8 rows
+int index_led_matrix = 0;     // Current row index (0-7)
+int shiftVar = 0;             // Shift variable (0-8)
+
+/* Pattern for letter "A" (8x8, with 1 empty column for spacing) */
+uint16_t matrix_buffer[8] = {
+    0x1800, // Row 0
+    0x2400, // Row 1
+    0x4200, // Row 2
+    0x4200, // Row 3
+    0x7E00, // Row 4
+    0x4200, // Row 5
+    0x4200, // Row 6
+    0x4200  // Row 7
+};
+
+/* ===== PART 3: FUNCTIONS FOR LED MATRIX EFFECT ===== */
+
+GPIO_PinState convertToBit(uint16_t hexa, int index)
+{
+  int actualIndex = (index + shiftVar) % 9;       // Apply horizontal shift
+  int bitValue = (actualIndex == 8) ? 0                 
+                 : (hexa >> (15 - actualIndex)) & 0x01;
+                 // ON if bit=1, else OFF
+  return (bitValue == 1) ? GPIO_PIN_SET : GPIO_PIN_RESET; 
+}
+
+/* 
+ * Update a single row of LED matrix according to matrix_buffer data
+ * Each bit corresponds to one column (ENM0..ENM7).
+ */
+void updateLEDMatrix(int index)
+{
+  HAL_GPIO_WritePin(GPIOA, ENM0_Pin, convertToBit(matrix_buffer[index], 0));
+  HAL_GPIO_WritePin(GPIOA, ENM1_Pin, convertToBit(matrix_buffer[index], 1));
+  HAL_GPIO_WritePin(GPIOA, ENM2_Pin, convertToBit(matrix_buffer[index], 2));
+  HAL_GPIO_WritePin(GPIOA, ENM3_Pin, convertToBit(matrix_buffer[index], 3));
+  HAL_GPIO_WritePin(GPIOA, ENM4_Pin, convertToBit(matrix_buffer[index], 4));
+  HAL_GPIO_WritePin(GPIOA, ENM5_Pin, convertToBit(matrix_buffer[index], 5));
+  HAL_GPIO_WritePin(GPIOA, ENM6_Pin, convertToBit(matrix_buffer[index], 6));
+  HAL_GPIO_WritePin(GPIOA, ENM7_Pin, convertToBit(matrix_buffer[index], 7));
+}
+
+/* 
+ * Scan the LED matrix row by row (multiplexing).
+*/
+void scanLEDMatrix()
+{
+  switch (index_led_matrix)
+  {
+  case 0: 
+      HAL_GPIO_WritePin(GPIOB, ROW7_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(GPIOB, ROW0_Pin, GPIO_PIN_SET);   
+      break;
+  case 1: 
+      HAL_GPIO_WritePin(GPIOB, ROW0_Pin, GPIO_PIN_RESET); 
+      HAL_GPIO_WritePin(GPIOB, ROW1_Pin, GPIO_PIN_SET);   
+      break;
+  case 2: 
+      HAL_GPIO_WritePin(GPIOB, ROW1_Pin, GPIO_PIN_RESET); 
+      HAL_GPIO_WritePin(GPIOB, ROW2_Pin, GPIO_PIN_SET);   
+      break;
+  case 3: 
+      HAL_GPIO_WritePin(GPIOB, ROW2_Pin, GPIO_PIN_RESET); 
+      HAL_GPIO_WritePin(GPIOB, ROW3_Pin, GPIO_PIN_SET);   
+      break;
+  case 4: 
+      HAL_GPIO_WritePin(GPIOB, ROW3_Pin, GPIO_PIN_RESET); 
+      HAL_GPIO_WritePin(GPIOB, ROW4_Pin, GPIO_PIN_SET);   
+      break;
+  case 5: 
+      HAL_GPIO_WritePin(GPIOB, ROW4_Pin, GPIO_PIN_RESET); 
+      HAL_GPIO_WritePin(GPIOB, ROW5_Pin, GPIO_PIN_SET);   
+      break;
+  case 6: 
+      HAL_GPIO_WritePin(GPIOB, ROW5_Pin, GPIO_PIN_RESET); 
+      HAL_GPIO_WritePin(GPIOB, ROW6_Pin, GPIO_PIN_SET);   
+      break;
+  case 7: 
+      HAL_GPIO_WritePin(GPIOB, ROW6_Pin, GPIO_PIN_RESET); 
+      HAL_GPIO_WritePin(GPIOB, ROW7_Pin, GPIO_PIN_SET);   
+      break;
+  default: 
+      break;
+  }
+  // Update LED data for the currently active row
+  updateLEDMatrix(index_led_matrix);
+  // Move to the next row
+  index_led_matrix++;
+  if (index_led_matrix >= MAX_LED_MATRIX)
+  {
+    index_led_matrix = 0;           // Reset to first row
+    shiftVar = (shiftVar + 1) % 9;  // Increment horizontal shift (loop 0..8)
+  }
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim->Instance == TIM2)
+  {
+    timerRun();
+    // 7-segment scanning (every 25ms for smooth display)
+    if (isTimerExpired(0))
+    {
+      setTimer(0, 25);
+      scanLED();
+    }
+    // Toggle DOT LED (every 750ms)
+    if (isTimerExpired(1))
+    {
+      setTimer(1, 75);
+      HAL_GPIO_TogglePin(GPIOA, DOT_Pin);
+    }
+    // Toggle RED LED (every 500ms)
+    if (isTimerExpired(2))
+    {
+      setTimer(2, 50);
+      HAL_GPIO_TogglePin(GPIOA, LED_RED_Pin);
+    }
+    // Update clock (every 1s)
+    if (isTimerExpired(3))
+    {
+      second++;
+      if (second >= 60)
+      {
+        second = 0;
+        minute++;
+      }
+      if (minute >= 60)
+      {
+        minute = 0;
+        hour++;
+      }
+      if (hour >= 24)
+      {
+        hour = 0;
+      }
+      updateClockBuffer();
+      setTimer(3, 100);
+    }
+    // LED Matrix scanning (every 10ms)
+    if (isTimerExpired(4))
+    {
+      setTimer(4, 10);
+      scanLEDMatrix();
+    }
+  }
+}
+
+\end{lstlisting}
+

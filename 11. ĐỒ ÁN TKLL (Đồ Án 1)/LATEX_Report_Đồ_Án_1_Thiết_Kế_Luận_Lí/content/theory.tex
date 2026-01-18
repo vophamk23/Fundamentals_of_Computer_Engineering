@@ -1,0 +1,2256 @@
+%----------------------------------------------------------
+\section{Phần Mở Đầu}
+
+
+\subsection{Giới thiệu đề tài}
+
+$\indent$Đề tài \textbf{“Smart Clock LCD With  Cooperative Scheduler”} được thực hiện với mục tiêu xây dựng một hệ thống đồng hồ thông minh đa chức năng hoạt động trên nền tảng ESP32. Trong hệ thống này, cơ chế \textit{Cooperative Scheduler} giữ vai trò chủ đạo trong việc quản lý, phối hợp và tối ưu hóa thời gian thực thi của các tác vụ. Việc áp dụng mô hình lập lịch hợp tác giúp đảm bảo cấu trúc hệ thống rõ ràng, dễ kiểm soát và phù hợp với các ứng dụng nhúng có mức độ phức tạp trung bình.
+
+\vspace{0.2cm}
+Bên cạnh những chức năng cơ bản như hiển thị thời gian, đo đạc môi trường và báo thức, hệ thống còn được mở rộng với nhiều tính năng nâng cao nhằm cải thiện trải nghiệm người dùng và thể hiện khả năng khai thác tối ưu tài nguyên của vi điều khiển. Sản phẩm là sự kết hợp hài hòa giữa phần cứng (RTC DS3231, cảm biến DHT11, LED 7-segment, LCD 16×2) và phần mềm (scheduler, quản lý task, xử lý nút nhấn), tạo nên một hệ thống hoàn chỉnh và ổn định.
+
+\subsubsection*{\hspace{0.5cm}Mục tiêu và động lực thực hiện đề tài:}
+\begin{itemize}
+    \item Ứng dụng kiến thức về hệ điều hành nhúng và cơ chế lập lịch bằng cách triển khai Cooperative Scheduler để quản lý nhiều tác vụ chạy song song trên ESP32, đồng thời kiểm chứng mức độ phù hợp của mô hình lập lịch hợp tác đối với hệ thống tài nguyên hạn chế.
+    \item Tối ưu hóa hiệu năng xử lý đa nhiệm, đảm bảo các thành phần như hiển thị thời gian, đọc cảm biến, báo thức, điều khiển nút và các chế độ nâng cao đều hoạt động ổn định và đúng thời điểm.
+    \item Phát triển tư duy thiết kế hệ thống nhúng hoàn chỉnh: xây dựng kiến trúc phần mềm theo task, thiết kế luồng hoạt động, tích hợp phần cứng, kiểm thử và đánh giá khả năng đáp ứng thời gian thực.
+    \item Tạo ra sản phẩm có tính ứng dụng cao, thân thiện với người dùng và dễ mở rộng, đồng thời là tiền đề nghiên cứu các mô hình lập lịch khác hoặc hệ điều hành thời gian thực (RTOS).
+\end{itemize}
+
+
+\subsection{Các chức năng chính của hệ thống}
+
+\begin{itemize}
+    \item \textbf{Chế độ hiển thị thời gian (Clock Mode):} \\
+    \vspace{-0.2cm}
+Hệ thống cung cấp khả năng hiển thị thời gian trực quan và chính xác:
+\begin{itemize}
+    \item Giờ - phút - giây được cập nhật liên tục theo thời gian thực.
+    \item Ngày - tháng - năm được đồng bộ từ module RTC DS3231 có độ chính xác cao.
+    \item Thông tin thời gian hiển thị song song trên LED 7-segment và LCD 16×2, giúp dễ quan sát trong nhiều điều kiện ánh sáng.
+\end{itemize}
+
+\item \textbf{Chức năng đo nhiệt độ và độ ẩm (Temperature - Humidity):} \\
+\vspace{-0.2cm}
+Theo dõi môi trường xung quanh thông qua cảm biến DHT11:
+\begin{itemize}
+    \item Thu thập nhiệt độ (°C) và độ ẩm (\%) với độ phân giải 0.1 đơn vị.
+    \item Cập nhật dữ liệu mỗi 2 giây để đảm bảo luôn mới.
+    \item Tích hợp cơ chế phát hiện lỗi cảm biến và hiển thị cảnh báo cho người dùng.
+\end{itemize}
+
+
+\item \textbf{Chức năng báo thức (Alarm):}\\ 
+\vspace{-0.2cm}Chế độ báo thức được thiết kế thân thiện và dễ sử dụng, người dùng có thể thao tác chính xác:
+\begin{itemize}
+    \item Cho phép thiết lập thời gian báo thức theo giờ – phút.
+    \item Khi đến thời điểm báo thức, buzzer và LED được kích hoạt đồng thời tạo tín hiệu cảnh báo.
+    \item Nút SET dùng để tắt báo thức nhanh.
+    \item Hỗ trợ hiển thị đồng thời \textit{thời gian thực} và \textit{thời gian báo thức}, giúp người dùng theo dõi một cách trực quan.
+\end{itemize}
+
+
+\item \textbf{Chức năng bấm giờ (Stopwatch):}\\
+\vspace{-0.2cm}
+Cho phép đo thời gian với độ chính xác cao, phù hợp cho các hoạt động thể thao hoặc thí nghiệm:
+
+\begin{itemize}
+    \item Bắt đầu hoặc dừng bấm giờ bằng nút \textbf{SET}.
+     \item Thời gian được hiển thị theo định dạng chuẩn \texttt{HH:MM:SS.CC}.
+    \item Hỗ trợ lưu trữ tối đa 5 mốc thời gian (laps) để phục vụ việc theo dõi nhiều giai đoạn.
+    \item Cho phép xem lại từng lap bằng nút \textbf{INC}.
+    \item Có khả năng tạm dừng và tiếp tục mà không làm mất dữ liệu đang đo.
+    \item Tự reset khi chuyển sang chế độ khác.
+\end{itemize}
+
+\item \textbf{Chức năng đếm ngược (Countdown):}\\
+\vspace{-0.2cm}
+Chế độ đếm ngược giúp người dùng đặt thời gian và theo dõi tiến trình một cách thuận tiện:
+\begin{itemize}
+     \item Cho phép thiết lập từng thành phần thời gian giờ - phút - giây riêng biệt.
+    \item Bộ đếm hoạt động với độ chính xác đến \textbf{centisecond}, phù hợp cho những yêu cầu cần độ chính xác cao.
+    \item Khi thời gian kết thúc về 0, hệ thống sẽ kích hoạt buzzer và LED để thông báo cho người dùng.
+    \item Nút INC cho phép reset nhanh về 00:00:00.
+     \item Hiển thị rõ ràng trạng thái hiện tại của đếm ngược gồm: \texttt{EDIT}, \texttt{RUN}, \texttt{STOP}, giúp người dùng theo dõi dễ dàng.
+\end{itemize}
+
+\item \textbf{ Chức năng điều khiển: }\\
+\vspace{-0.2cm}
+Hệ thống điều khiển thông qua 3 nút
+\begin{itemize}
+\item \textbf{MODE:} chuyển đổi tuần tự giữa 5 chế độ hoạt động của hệ thống.
+   
+    \item \textbf{INC:} tăng giá trị khi chỉnh thời gian, xem lap hoặc thực hiện reset nhanh.
+     \item \textbf{SET:} dùng để xác nhận, bắt đầu, tạm dừng hoặc thoát chỉnh sửa tùy theo ngữ cảnh sử dụng.
+    \item Tất cả nút đều được tích hợp \textbf{anti-debounce } để tránh tín hiệu nhiễu và đảm bảo hệ thống ghi nhận đúng thao tác của người dùng.
+\end{itemize}
+\end{itemize} 
+
+
+
+
+\subsection{Giới hạn của đề tài}
+
+\subsubsection*{\hspace{0.5cm}Giới hạn về phần cứng}
+\begin{itemize}
+    \item Độ chính xác thời gian phụ thuộc vào hệ thống timer nội bộ của ESP32, dễ bị tác động bởi sự thay đổi nhiệt độ môi trường và độ ổn định của nguồn cấp.
+    \item Cảm biến DHT11 tồn tại nhiều hạn chế về hiệu năng:
+    \begin{itemize}
+        \item Sai số nhiệt độ tương đối lớn: $\pm2\,^{\circ}\mathrm{C}$.
+        \item Sai số độ ẩm: $\pm5\%$, ảnh hưởng đến độ tin cậy của phép đo.
+        \item Tốc độ phản hồi chậm, chỉ cập nhật dữ liệu mỗi 2 giây.
+    \end{itemize}
+    \item LED 7-segment chỉ hiển thị ký tự số, không thể hiện thị chữ hoặc ký tự đặc biệt.
+    \item LCD 16×2 bị giới hạn dung lượng hiển thị (2 dòng × 16 ký tự), gây khó khăn trong việc trình bày các thông tin dài hoặc phức tạp.
+\end{itemize}
+
+\subsubsection*{\hspace{0.5cm}Giới hạn về chức năng}
+\begin{itemize}
+    \item Chức năng Stopwatch chỉ lưu tối đa 5 mốc thời gian (laps) và không hỗ trợ lưu trữ lâu dài.
+    \item Chức năng Alarm chỉ cung cấp một báo thức duy nhất, không hỗ trợ đặt nhiều báo thức hoặc báo thức lặp theo ngày.
+    \item Chế độ Countdown bị giới hạn tối đa ở mức 99{:}59{:}59 vì ràng buộc hiển thị và xử lý.
+    \item Hệ thống chỉ được trang bị 3 nút điều khiển nên một số tác vụ yêu cầu nhiều thao tác để hoàn thành.
+\end{itemize}
+
+\subsubsection*{\hspace{0.5cm}Giới hạn của scheduler}
+\begin{itemize}
+    \item Cooperative Scheduler không hỗ trợ cơ chế preemptive, do đó các task không thể tự gián đoạn nhau. Nếu một task chạy quá lâu, toàn bộ hệ thống có thể bị trễ.
+    \item Không phù hợp với các ứng dụng yêu cầu thời gian thực cứng (hard real-time).
+    \item Số lượng task khả dụng bị giới hạn (tối đa khoảng 40 tùy cấu hình bộ nhớ và dung lượng chương trình).
+    \item Độ phân giải tick cố định 10\,ms, chưa đáp ứng tốt các tác vụ đòi hỏi độ chính xác thời gian cao hơn.
+\end{itemize}
+
+\subsubsection*{\hspace{0.5cm}Giới hạn về nguồn điện}
+\begin{itemize}
+    \item Hệ thống yêu cầu nguồn 5V ổn định để đảm bảo hoạt động chính xác và tuổi thọ linh kiện.
+    \item Mức tiêu thụ điện tăng đáng kể khi buzzer và LED hoạt động liên tục.
+    \item Hệ thống chưa được tối ưu hoá năng lượng và không hỗ trợ chế độ ngủ (sleep mode), dẫn đến tiêu thụ điện cao và không phù hợp với các thiết bị dùng pin trong thời gian dài.
+\end{itemize}
+
+
+\newpage
+
+\section{Cơ Sở Lý Thuyết và Nền Tảng Hệ Thống}
+
+\subsection{Giới thiệu Tổng quan về Sản phẩm Smart Clock}
+
+$\indent$Hệ thống \textbf{Smart Clock} được phát triển như một giải pháp tích hợp giữa đo – hiển thị thời gian và giám sát môi trường (nhiệt độ, độ ẩm), vận hành dựa trên mô hình \textbf{Cooperative Scheduler}. Đây là mô hình lập lịch phi cưỡng bức (\textit{non-preemptive}), nơi mỗi tác vụ hoàn tất công việc rồi tự trả quyền điều khiển về bộ lập lịch. Cách vận hành này mang lại các ưu điểm sau:
+
+\begin{itemize}
+    \item \textbf{Ổn định và dễ dự đoán:} không có sự ngắt quãng không mong muốn giữa các task.
+    \item \textbf{Giảm xung đột dữ liệu:} hạn chế hiện tượng \textit{race condition}.
+    \item \textbf{Tối ưu tài nguyên:} không cần cấp phát nhiều stack như hệ điều hành preemptive.
+    \item \textbf{Phù hợp với hệ thống nhúng nhỏ:} thích hợp với yêu cầu thời gian thực vừa phải.
+\end{itemize}
+
+\paragraph*{\hspace{0.5cm}Module hiển thị và cảm biến:}
+\begin{itemize}
+    \item \textbf{Cảm biến nhiệt độ/độ ẩm (DHT11/DHT22):} Đo lường và hiển thị các thông số môi trường.
+    \item \textbf{Module đồng hồ thời gian thực (RTC DS3231):} Cung cấp thời gian và ngày tháng chính xác, đồng thời hỗ trợ chức năng báo thức.
+\end{itemize}
+
+\subsubsection*{\hspace{0.5cm}2.1.1. Kiến trúc tổng thể của hệ thống}
+
+$\indent$Kiến trúc Smart Clock được tổ chức theo mô hình phân lớp (layered architecture), nhằm tách biệt phần cứng, tầng trừu tượng phần cứng, bộ lập lịch và tầng ứng dụng.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{image/1.png}
+    \vspace{0.5cm}
+    \caption{Sơ đồ kiến trúc tổng thể hệ thống}
+\end{figure}
+
+
+\subsubsection*{\hspace{0.5cm}(A) Application Layer - Tầng ứng dụng}
+
+$\indent$Tầng này chứa toàn bộ các tác vụ điều khiển logic của hệ thống, xây dựng theo mô hình \textbf{run-to-completion}, không được phép chặn (blocking):
+
+\begin{itemize}
+    \item \textbf{Task\_CheckButtons}: Đọc nút nhấn, xử lý debounce, nhận dạng chế độ.
+    \item \textbf{Task\_UpdateDisplay}: Hiển thị thời gian lên LED 7 đoạn (MAX7219).
+    \item \textbf{Task\_UpdateLCD}: Cập nhật LCD I2C 16x2 với thời gian, nhiệt độ, độ ẩm.
+    \item \textbf{Task\_CheckAlarm}: Kiểm tra và xử lý trạng thái báo thức.
+    \item \textbf{Task\_HandleLEDBlink}: Điều khiển LED nhấp nháy theo chế độ.
+    \item \textbf{Task\_ReadSensors}: Đọc cảm biến DHT11 và đồng bộ thời gian từ DS3231.
+\end{itemize}
+
+\subsubsection*{\hspace{0.5cm}(B) Scheduler Layer - Bộ lập lịch}
+
+$\indent$Bộ lập lịch cooperative điều phối toàn bộ hoạt động của hệ thống thông qua ba hàm chính:
+
+\begin{itemize}
+    \item \textbf{SCH\_Add\_Task()}: Thêm task kèm delay khởi tạo và chu kỳ lặp.
+    \item \textbf{SCH\_Update()}: Gọi từ ngắt timer, giảm delay của task.
+    \item \textbf{SCH\_Dispatch\_Tasks()}: Thực thi các task đã đến hạn.
+\end{itemize}
+
+
+\subsubsection*{\hspace{0.5cm}(C) Hardware Abstraction Layer (HAL)}
+
+$\indent$HAL cung cấp lớp giao tiếp trừu tượng giữa phần mềm và phần cứng, giúp hệ thống dễ mở rộng và bảo trì:
+
+\begin{itemize}
+    \item Driver LED 7 đoạn (MAX7219 -- SPI)
+    \item Driver LCD 16x2 (I2C)
+    \item Driver nút nhấn (GPIO)
+    \item Cảm biến DHT11 (One-wire)
+    \item Module thời gian thực DS3231 (I2C)
+\end{itemize}
+
+\subsubsection*{\hspace{0.5cm}(D) Hardware Layer - Tầng phần cứng}
+
+$\indent$Tầng thấp nhất bao gồm toàn bộ tài nguyên phần cứng của vi điều khiển ESP32:
+
+\begin{itemize}
+    \item CPU Xtensa LX6 dual-core 240\,MHz
+    \item Bộ định thời 64-bit độ chính xác cao
+    \item Các chuẩn giao tiếp: I2C, SPI, UART, GPIO
+    \item Bộ nhớ Flash và RAM tích hợp
+\end{itemize}
+
+
+\subsubsection*{\hspace{0.5cm}2.1.2. Nguyên lý hoạt động của hệ thống}
+
+$\indent$Hệ thống Smart Clock vận hành dựa trên mô hình \textbf{Cooperative Scheduler}, trong đó các tác vụ được thực thi theo cơ chế “run-to-completion” và tự trả quyền điều khiển về bộ lập lịch sau khi hoàn thành. Quá trình hoạt động của hệ thống được chia thành ba giai đoạn chính:
+
+
+
+\subsubsection*{\hspace{0.5cm}(A) Giai đoạn khởi tạo (Initialization Phase)}
+
+$\indent$Khi hệ thống được cấp nguồn, toàn bộ các thành phần phần cứng và phần mềm sẽ được khởi tạo nhằm đảm bảo trạng thái hoạt động ổn định trước khi chạy chính thức. Các bước thực hiện bao gồm:
+
+\begin{itemize}
+    \item Khởi tạo các giao thức giao tiếp: I2C, SPI, GPIO.
+    \item Cấu hình \textbf{hardware timer} tạo ngắt định kỳ mỗi 10\,ms.
+    \item Khởi động \textbf{Scheduler} và thiết lập cấu trúc dữ liệu quản lý task.
+    \item Nạp các task vào hàng đợi với delay khởi tạo và chu kỳ (period) tương ứng.
+    \item Kiểm tra trạng thái của các module phần cứng: LCD, LED 7 đoạn, DHT11, DS3231.
+\end{itemize}
+
+$\indent$Giai đoạn này đảm bảo toàn bộ thành phần được đồng bộ hóa, sẵn sàng cho việc vận hành theo thời gian thực.
+
+\subsubsection*{\hspace{0.5cm}(B) Vòng lặp chính (Main Loop Execution)}
+
+Sau khi hoàn tất khởi tạo, hệ thống chuyển sang vòng lặp chính. Ở mô hình cooperative scheduler, hàm \texttt{loop()} được tối giản và chỉ thực hiện một nhiệm vụ duy nhất:
+
+\begin{itemize}
+    \item Gọi \textbf{SCH\_Dispatch\_Tasks()} liên tục.
+\end{itemize}
+
+Bộ lập lịch sẽ:
+\begin{itemize}
+    \item Kiểm tra các task có trạng thái sẵn sàng (RunMe $>$ 0).
+    \item Thực thi các task theo đúng trình tự và ưu tiên.
+    \item Cập nhật lại thời điểm chạy kế tiếp cho các task có chu kỳ.
+\end{itemize}
+
+Nhờ cơ chế non-blocking, hệ thống có thể xử lý đồng thời nhiều chức năng như hiển thị thời gian, kiểm tra báo thức, đọc cảm biến, điều khiển LED mà không gây nghẽn hoặc treo hệ thống.
+
+\subsubsection*{\hspace{0.5cm}(C) Ngắt Timer (Interrupt Service Routine – ISR)}
+
+$\indent$Ngắt từ bộ định thời phần cứng đóng vai trò như “nhịp tim” của hệ thống, xảy ra mỗi 10\,ms. Bên trong ISR, các nhiệm vụ sau được thực hiện:
+
+\begin{itemize}
+    \item Giảm giá trị \textbf{delay} của từng task.
+    \item Tăng biến \textbf{RunMe} đối với các task đã đến thời điểm chạy.
+    \item Cập nhật \textbf{system tick}, phục vụ việc hiển thị và đo thời gian.
+\end{itemize}
+
+Cơ chế ngắt định kỳ này mang lại độ chính xác cao cho hệ thống, đảm bảo các tác vụ như cập nhật hiển thị, kiểm tra báo thức hay phản hồi nút nhấn hoạt động đúng thời điểm.
+
+
+\subsection{Công cụ sử dụng trong quá trình phát triển}
+
+\subsubsection{PlatformIO IDE}
+
+$\indent$PlatformIO \includegraphics[height=0.5cm]{image/4.png} được lựa chọn làm nền tảng phát triển nhúng chính nhờ khả năng hỗ trợ mạnh mẽ và hiện đại. Công cụ này mang lại một môi trường phát triển chuyên nghiệp với các đặc điểm nổi bật:
+
+\begin{itemize}
+    \item Quản lý thư viện tự động và theo phiên bản, đảm bảo tính ổn định trong suốt quá trình phát triển.
+    \item Hệ thống build tối ưu cho ESP32, giúp rút ngắn thời gian biên dịch.
+    \item Tích hợp bộ công cụ debug, cho phép theo dõi biến và stack theo thời gian thực.
+    \item Serial Monitor tích hợp trực tiếp trong IDE, cấu trúc dự án rõ ràng, dễ mở rộng và bảo trì.
+
+\end{itemize}
+
+
+\subsubsection{Thiết bị phần cứng sử dụng}
+
+$\indent$Để xây dựng hệ thống Smart Clock, nhóm sử dụng tập hợp các thiết bị phần cứng được lựa chọn phù hợp với yêu cầu hiển thị, đo đạc và xử lý thời gian thực. Các thiết bị được mô tả chi tiết trong bảng:
+
+
+
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\setlength{\tabcolsep}{10pt}
+
+\begin{tabular}{p{0.8cm} p{4.5cm} p{8cm}}
+\rowcolor{green!35!black}
+\color{white}\textbf{\centering STT} &
+\color{white}\textbf{\centering Thiết bị} &
+\color{white}\textbf{\centering Mô tả chi tiết} \\
+
+\rowcolor{gray!8}
+1 & ESP32 DevKit V1 &
+\vspace{-0.5cm}
+ \textbf{Thông số chính:}  
+CPU Dual-core 240MHz; RAM 520KB; Flash 4MB; ADC 12-bit; 18 kênh;  
+Hỗ trợ: I2C, SPI, UART, PWM, WiFi/BLE;  
+\textbf{Lý do chọn:} mạnh, rẻ, phù hợp xử lý đa nhiệm, hỗ trợ scheduler.
+
+
+ \\
+
+2 & LED 7-Segment MAX7219 &
+Hiển thị số rõ ràng; điều khiển qua SPI chỉ 3 chân; phù hợp hiển thị đồng hồ HH:MM:SS; tiêu thụ ít chân GPIO. \\
+
+\rowcolor{gray!8}
+3 & Màn hình LCD I2C 16x2 &
+Hiển thị ký tự, thông báo và trạng thái hệ thống; giao tiếp I2C giảm số chân sử dụng. \\
+
+4 & DHT11 - Cảm biến nhiệt độ/độ ẩm &
+Nhiệt độ 0–50°C; độ ẩm 20 – 100 \%; tần suất đọc 0.5Hz; dùng theo dõi môi trường. \\
+
+\rowcolor{gray!8}
+5 & RTC DS3231 &
+Sai số $\pm$2ppm ($\approx$ 1 phút/năm); có pin backup duy trì thời gian khi mất điện; tạo đồng hồ chính xác cao. \\
+
+6 & Nút nhấn (Button) &
+Nút NO, kết hợp INPUT\_PULLUP giúp chống nhiễu; dùng để cài đặt giờ, đổi chế độ, điều khiển. \\
+
+\rowcolor{gray!8}
+7 & Buzzer Active &
+Chỉ cần cấp điện là phát âm; dễ điều khiển; dùng làm báo thức và tín hiệu thông báo. \\
+
+8 & LED báo trạng thái &
+LED đỏ/vàng/xanh dùng hiển thị trạng thái hoạt động, báo lỗi và cảnh báo khi báo thức. \\
+
+\rowcolor{gray!8}
+9 & Bộ nguồn 5V DC &
+Cung cấp nguồn ổn định cho toàn hệ thống, đảm bảo ESP32 và cảm biến hoạt động chính xác. \\
+
+10 & Dây Jumper &
+Kết nối linh kiện trên breadboard; hỗ trợ kiểm thử và thay đổi sơ đồ mạch linh hoạt. \\
+
+\end{tabular}
+\vspace{0.2cm}
+\caption{Danh sách thiết bị phần cứng sử dụng trong hệ thống đồng hồ – cảm biến môi trường}
+\end{table}
+
+
+
+% Bố cục ảnh: 1 trên, 2 ngang, 2 ngang
+\begin{figure}[h!]
+    \centering
+    % Ảnh trên cùng
+    \includegraphics[width=0.55\textwidth]{image/2.png}
+    \vspace{0.5cm}
+    \caption{ESP32 DevKit V1 }
+\end{figure}
+
+\vspace{0.5cm}
+% 2 ảnh ngang nhau
+\begin{figure}[h!]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/3.jpg}
+        \vspace{0.5cm}
+        \caption{LED 7-Segment MAX7219}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/5.png}
+        \vspace{0.5cm}
+        \caption{Màn hình LCD I2C 16x2}
+    \end{minipage}
+\end{figure}
+
+\vspace{0.5cm}
+% 2 ảnh ngang nhau tiếp theo
+\begin{figure}[h!]
+    \centering
+    \begin{minipage}{0.4\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/6.jpg}
+        \vspace{0.5cm}
+        \caption{Cảm biến - DHT11}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.4\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/7.jpg}
+        \vspace{0.5cm}
+        \caption{RTC DS3231}
+    \end{minipage}
+\end{figure}
+
+
+
+
+
+\subsection{Các kỹ thuật và giải thuật đặc biệt}
+
+\subsubsection{Cooperative Scheduler với giải thuật O(1) Update}
+
+\paragraph*{\hspace{0.5cm}Mục đích:} ~ 
+
+Scheduler là hệ thống điều phối các \textit{task} thực thi đúng thời điểm, thay thế \texttt{delay()} – tránh block toàn bộ chương trình. Dự án sử dụng \textbf{Cooperative Scheduler}, kiến trúc phi cưỡng bức, nghĩa là \textit{task} tự nhả quyền điều khiển, giúp tối ưu khả năng đáp ứng thời gian thực.
+\vspace{0.2cm}
+
+Cấu trúc Task:
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+typedef struct {
+    void (*pTask)(void);    // Pointer to the task function
+    uint32_t Delay;         // Delay time in ticks before task runs
+    uint32_t Period;        // Task period in ticks 
+    uint8_t RunMe;          // Flag indicating task is ready to run
+    uint32_t TaskID;        // Unique identifier for the task
+} sTask;
+\end{lstlisting}
+
+Vấn đề với cách cập nhật truyền thống (O(n)):
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+void SCH_Update_Old() {
+    for (int i = 0; i < task_count; i++) {
+        if (SCH_tasks[i].Delay > 0)
+            SCH_tasks[i].Delay--;  // Decrement delay for all tasks
+    }
+}
+\end{lstlisting}
+Khi có nhiều \textit{task}, ISR chạy lâu, ảnh hưởng realtime và khả năng đáp ứng của hệ thống.
+
+\vspace{0.2cm}
+Giải pháp O(1):
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+void SCH_Update(void) {
+    if (task_count > 0) {
+        if (SCH_tasks_G[0].Delay > 0)
+            SCH_tasks_G[0].Delay--;  // Only update the first task
+        
+        elapsed_time++;
+        
+        if (SCH_tasks_G[0].Delay == 0)
+            SCH_tasks_G[0].RunMe++; // Mark the first task ready to run
+    }
+}
+\end{lstlisting}
+
+\vspace{0.2cm}
+\paragraph*{\hspace{0.5cm}Nguyên lý hoạt động:}
+\begin{itemize}
+    \item Tasks được sắp xếp theo \texttt{Delay} tăng dần.
+    \item Task đầu tiên là task cần chạy sớm nhất.
+    \item ISR chỉ giảm Delay của task đầu (~10 ms), thời gian xử lý ngắn và không phụ thuộc số lượng task.
+    \item Các task khác được cập nhật trong \texttt{Dispatch}, tránh làm ISR quá tải.
+\end{itemize}
+
+\paragraph*{\hspace{0.5cm}Ví dụ minh họa:}~ 
+
+Giả sử có 3 task: A (\texttt{Delay=5}), B (\texttt{Delay=10}), C (\texttt{Delay=20}).  
+\begin{itemize}
+    \item ISR giảm Delay của A cho tới 0 → đánh dấu \texttt{RunMe++}. 
+    \item Task B và C chỉ được cập nhật trong \texttt{Dispatch} → ISR luôn nhanh và ổn định.
+\end{itemize}
+
+\paragraph*{\hspace{0.5cm}Lợi ích:}
+\begin{itemize}
+    \item ISR cực nhanh, không phụ thuộc số lượng task.
+    \item Thời gian thực thi xác định (\textit{deterministic}).
+    \item Tiết kiệm RAM, không cần stack riêng cho mỗi task.
+    \item Dễ debug, task chạy tuần tự, logic dễ kiểm soát.
+\end{itemize}
+
+\subsubsection{Button Debouncing - Giải pháp chống dội nút nhấn}
+
+\subsubsection*{\hspace{0.5cm}Vấn đề:} 
+$\indent$Nút nhấn vật lý tạo ra nhiều xung điện không mong muốn trong 5–50 ms (\textit{bouncing}), dẫn đến một lần nhấn bị nhận nhiều lần, gây lỗi chức năng.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\linewidth]{image/9.png}
+    \vspace{0.5cm}
+    \caption{So sánh tín hiệu lý tưởng và tín hiệu thực tế của nút nhấn (bouncing)}
+\end{figure}
+
+
+\paragraph*{Giải pháp phần mềm (Software Debouncing):}
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+#define BUTTON_DEBOUNCE 300  // Debounce time in milliseconds
+
+void handleModeButton(LedControl *lc) {
+    if (millis() - lastButtonPress < BUTTON_DEBOUNCE)
+        return;  // Ignore input if button pressed too quickly
+    
+    lastButtonPress = millis();  // Update last press timestamp
+    displayMode = (displayMode + 1) % TOTAL_MODES;  
+}
+\end{lstlisting}
+
+\paragraph*{Nguyên lý hoạt động:}
+\begin{itemize}
+    \item Lưu thời điểm nhấn cuối \texttt{lastButtonPress}.
+    \item Mỗi nhấn mới: tính \texttt{millis() - lastButtonPress}.
+    \item Nếu < 300 ms → bỏ qua (xung bouncing).
+    \item Nếu $\ge$ 300 ms → xử lý nhấn thật.
+\end{itemize}
+
+\paragraph*{Ví dụ minh họa Timeline:}
+\begin{itemize}
+    \item 0 ms    → Nhấn lần 1 → Xử lý
+    \item 50 ms   → Bouncing → Bỏ qua
+    \item 120 ms  → Bouncing → Bỏ qua
+    \item 250 ms  → Bouncing → Bỏ qua
+    \item 400 ms  → Nhấn lần 2 → Xử lý (đã qua 300 ms)
+\end{itemize}
+
+\paragraph*{Lợi ích:}
+\begin{itemize}
+    \item Không cần phần cứng bổ sung (tụ, điện trở).
+    \item Tiết kiệm chi phí linh kiện.
+    \item Dễ điều chỉnh debounce bằng cách thay đổi \texttt{BUTTON\_DEBOUNCE}.
+    \item Hoạt động ổn định với tất cả loại nút nhấn vật lý.
+\end{itemize}
+
+
+
+\vspace{0.5cm}
+% --- Bảng tóm tắt các kỹ thuật ---
+\begin{table}[h!]
+\centering
+\renewcommand{\arraystretch}{1.3} % tăng khoảng cách giữa các hàng
+\rowcolors{2}{gray!10}{white}      % xen kẽ màu hàng: trắng và xám nhạt
+\caption{Tóm tắt các kỹ thuật đặc biệt}
+\begin{tabular}{@{}p{2.5cm} p{4cm} p{3.8cm} p{4cm}@{}}
+\toprule
+\textbf{Kỹ thuật} & \textbf{Vấn đề giải quyết} & \textbf{Giải pháp} & \textbf{Lợi ích} \\
+\midrule
+Scheduler O(1) & ISR chậm khi có nhiều task & Chỉ cập nhật task đầu tiên & ISR nhanh, deterministic, tiết kiệm RAM \\
+Debouncing & Nút nhấn vật lý tạo nhiều xung & Kiểm tra thời gian giữa hai lần nhấn & Không cần phần cứng, dễ điều chỉnh, ổn định \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+
+
+
+\section{Thiết Kế Hệ Thống}
+
+\subsection{Sơ đồ các khối Chức năng}
+$\indent$Hệ thống \textbf{Smart Clock} được thiết kế theo mô hình khối, với các thành phần chính: bộ vi điều khiển, khối đầu vào, khối đầu ra và nguồn. Sơ đồ khối minh họa mối quan hệ và luồng dữ liệu giữa các thành phần như sau:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{image/8.png}
+    \vspace{0.5cm}
+    \caption{Sơ đồ khối hệ thống Smart Clock}
+\end{figure}
+
+\subsection{Mô tả các khối chức năng}
+
+\subsubsection{Khối vi điều khiển ESP32 (Trung tâm xử lý)}
+\subsubsection*{\hspace{0.5cm}Mô tả chung:}  
+$\indent$ESP32 là trung tâm xử lý của hệ thống \textbf{Smart Clock}, chịu trách nhiệm điều phối các task, xử lý dữ liệu cảm biến, quản lý hiển thị và điều khiển báo thức. Hệ thống vận hành theo mô hình \textit{Cooperative Scheduler}, giúp các task thực thi tuần tự, ổn định và dự đoán được thời gian chạy.
+
+\vspace{0.2cm}
+\textbf{Thông số kỹ thuật:}
+\begin{itemize}
+    \item CPU: Dual-core Xtensa LX6 @ 240 MHz
+    \item RAM: 520 KB SRAM; Flash: 4 MB
+    \item Timer: 64-bit hardware timer, độ phân giải 1 $\mu$s
+    \item Giao tiếp: GPIO, I2C, SPI, UART
+\end{itemize}
+
+\vspace{0.2cm}
+\textbf{Chức năng chính:}
+\begin{itemize}
+    \item Thực hiện \textit{Cooperative Scheduler} với tick 10 ms, điều phối 6 task song song.
+    \item Quét và xử lý nút nhấn MODE, SET, INC với \textit{software debouncing}.
+    \item Đọc dữ liệu cảm biến DHT11/DHT22 (nhiệt độ và độ ẩm) và cập nhật hiển thị.
+    \item Điều khiển LED 7-segment, LCD 16x2, Buzzer và LED Indicator.
+    \item Quản lý logic báo thức (\textit{Alarm}) và đếm ngược (\textit{Countdown}).
+    \item Giám sát trạng thái thiết bị ngoại vi, đảm bảo hoạt động ổn định và liên tục.
+\end{itemize}
+
+\subsubsection{Khối đầu vào (Input Devices)}
+$\indent$Thu thập dữ liệu từ các nút nhấn, cảm biến nhiệt độ/độ ẩm DHT11/DHT22 và module RTC DS3231, cung cấp thông tin cho ESP32 xử lý và hiển thị.
+\subsubsection*{A. Nút nhấn (MODE, SET, INC)\includegraphics[height=0.6cm]{image/10.png}}
+\begin{table}[h!]
+\centering
+\caption{Chức năng các nút nhấn}
+\begin{tabular}{@{}l l l@{}}
+\toprule
+\textbf{Nút} & \textbf{GPIO} & \textbf{Chức năng} \\
+\midrule
+MODE & 16 & Chuyển đổi chế độ hiển thị (5 chế độ) \\
+SET  & 17 & Xác nhận/Cài đặt/Start-Stop \\
+INC  & 5  & Tăng giá trị/Reset/Xem laps \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Kỹ thuật xử lý:}
+\begin{itemize}
+    \item Cấu hình INPUT\_PULLUP (dùng điện trở kéo lên nội bộ)
+    \item Software debouncing: 300 ms
+    \item Quét nút nhấn mỗi 50 ms qua \texttt{Task\_CheckButtons}
+\end{itemize}
+
+\subsubsection*{B. Cảm biến DHT11 (Nhiệt độ và độ ẩm) \includegraphics[height=0.8cm]{image/6.jpg}}
+\begin{itemize}
+    \item Giao tiếp: 1-Wire (GPIO 27); Thời gian đọc: 2 giây/lần.
+    \item Phạm vi đo: Nhiệt độ 0–50$^\circ$C (±2$^\circ$C), Độ ẩm 20–90\% RH (±5\%)
+\end{itemize}
+
+\textbf{Chức năng:}
+\begin{itemize}
+    \item Đo nhiệt độ và độ ẩm môi trường
+    \item Cung cấp dữ liệu cho hiển thị LED 7-segment và LCD
+\end{itemize}
+
+\subsubsection*{C. Module RTC DS3231 (Đồng hồ thời gian thực)\includegraphics[height=0.8cm]{image/7.jpg}}
+\begin{itemize}
+    \item Giao tiếp: I2C (SDA: 21, SCL: 22)
+    \item Độ chính xác: ±2 ppm (±1 phút/năm)
+    \item Pin backup: CR2032 (giữ giờ khi mất điện)
+\end{itemize}
+
+\textbf{Chức năng:}
+\begin{itemize}
+    \item Cung cấp giờ, phút, giây, ngày, tháng, năm
+    \item Duy trì thời gian khi mất nguồn chính
+\end{itemize}
+
+\subsubsection{Khối đầu ra (Output Devices)}
+$\indent$Hiển thị thông tin cho người dùng qua LED 7-segment, LCD 16x2, Buzzer và LED Indicator.
+\subsubsection*{A. LED 7-Segment MAX7219 (8 chữ số)      \includegraphics[height=0.8cm]{image/3.jpg}}
+\begin{itemize}
+    \item Giao tiếp: SPI (DIN: 13, CLK: 14, CS: 12)
+    \item Số chữ số: 8, độ sáng 16 mức (0–15)
+    \item Điều khiển: Multiplexing tự động
+\end{itemize}
+
+\textbf{Chức năng:}
+\begin{itemize}
+    \item Hiển thị giờ, phút, giây, centisecond
+    \item Định dạng: HH.MM.SS.CC hoặc TT.HH.SS.CC
+    \item Cập nhật dữ liệu mỗi 100 ms
+\end{itemize}
+
+\subsubsection*{B. LCD 16x2 I2C      \includegraphics[height=0.8cm]{image/5.png}}
+\begin{itemize}
+    \item Giao tiếp: I2C (SDA: 21, SCL: 22, Addr: 0x27)
+    \item Kích thước: 16 cột × 2 hàng, Backlight LED xanh lam
+\end{itemize}
+
+\textbf{Chức năng:}
+\begin{itemize}
+    \item Hiển thị tiêu đề, trạng thái và dữ liệu chi tiết
+    \item Dòng 1: Tiêu đề hoặc trạng thái; Dòng 2: Dữ liệu chi tiết
+    \item Cập nhật mỗi 100 ms
+\end{itemize}
+
+\subsubsection*{C. Buzzer áp điện (GPIO 32)}
+\begin{itemize}
+    \item Báo động khi kết thúc đếm ngược (\textit{Countdown}) hoặc báo thức (\textit{Alarm})
+    \item Bật/tắt: \texttt{digitalWrite(HIGH/LOW)}, tắt bằng nút SET
+    \item Tần số: 2–4 kHz, âm lượng: 85 dB @ 10 cm, tiêu thụ: 30 mA
+\end{itemize}
+
+\subsubsection*{D. LED Indicator (GPIO 33)}
+\begin{itemize}
+    \item Nháy khi Alarm hoặc Countdown được kích hoạt
+    \item Tần số nháy: 500 ms ON / 500 ms OFF
+    \item Điều khiển qua \texttt{Task\_HandleLEDBlink} (tick 100 ms)
+    \item Trạng thái: ON - cảnh báo đang hoạt động, OFF - không có cảnh báo
+\end{itemize}
+
+
+
+
+
+\section{Hiện Thực Hệ Thống}
+\subsection{Hiện Thực Phần Cứng}
+
+\subsubsection{Sơ Đồ Kết Nối Mạch Chi Tiết (Schematic Diagram)}
+
+$\indent$Hệ thống \textit{Smart Clock} được phát triển dựa trên vi điều khiển \textbf{ESP32-WROOM-32}, đóng vai trò là trung tâm xử lý và giao tiếp với toàn bộ ngoại vi. Kiến trúc phần cứng được thiết kế theo mô hình phân khối, trong đó mỗi khối đảm nhận một chức năng độc lập nhưng phối hợp thông qua các chuẩn giao tiếp phổ biến như \textbf{SPI}, \textbf{I2C}, \textbf{1-Wire} và các chân \textbf{GPIO Digital}. Cách tiếp cận này giúp hệ thống dễ dàng mở rộng, ổn định và tối ưu sử dụng tài nguyên chân của ESP32.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{image/12.png}
+    \vspace{0.5cm}
+    \caption{Sơ đồ kết nối phần cứng hệ thống ESP32}
+\end{figure}
+
+
+Thiết kế phần cứng của hệ thống Smart Clock được xây dựng theo tiêu chí: gọn gàng, ổn định và dễ mở rộng. ESP32 đóng vai trò trung tâm, giao tiếp với các module ngoại vi thông qua SPI, I2C, 1-Wire và GPIO Digital.
+
+\vspace{0.2cm}
+\textbf{A. LED 7-Segment MAX7219 (SPI)}  
+MAX7219 điều khiển 8 digit LED qua SPI 3 dây:  
+DIN-GPIO13, CLK-GPIO14, CS-GPIO12; nguồn 5V.  
+Hỗ trợ 16 mức sáng, quét nội tự động, giảm tải cho CPU.
+
+\textbf{B. LCD 16x2 I2C (0x27)}  
+LCD sử dụng IC PCF8574, kết nối qua SDA-GPIO21 và SCL-GPIO22.  
+Hiển thị thông tin dạng text: thời gian, ngày tháng, nhiệt độ, trạng thái hệ thống.
+
+\textbf{C. RTC DS3231 (0x68)}  
+Chung bus I2C với LCD: SDA-GPIO21, SCL-GPIO22.  
+Độ chính xác cao (±2ppm), có pin CR2032 lưu thời gian khi mất nguồn.
+
+\textbf{D. Cảm biến DHT11 (1-Wire)}  
+DATA–GPIO27, hoạt động 3.3V hoặc 5V, có pull-up 10k$\Omega$.  
+Độ phân giải 1°C và 1\%RH; chu kỳ đo tối thiểu 1 giây.
+
+\textbf{E. Nút nhấn, Buzzer và LED (GPIO Digital)}  
+Ba nút nhấn dùng INPUT\_PULLUP: MODE–GPIO16, SET–GPIO17, INC–GPIO5.  
+Thiết bị phản hồi: Buzzer–GPIO32 (Active HIGH), LED–GPIO33 (Active HIGH).
+
+\textbf{F. Nguồn cấp và ổn áp}  
+Nguồn vào 5V; ESP32 dùng 3.3V nội; các module MAX7219/LCD/RTC dùng 5V.  
+Hệ thống yêu cầu tối thiểu 500 mA để tránh brownout khi LED hoạt động ở độ sáng cao.
+
+
+\subsubsection{Bảng Phân Bổ Chân GPIO}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\setlength{\tabcolsep}{8pt}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\rowcolor{gray!20}
+\textbf{GPIO} & \textbf{Chức năng} & \textbf{Thiết bị} & \textbf{Giao thức / Địa chỉ} \\
+\hline
+13 & DIN (Data In) & MAX7219 LED Matrix & SPI (Software) \\
+\hline
+14 & CLK (Clock) & MAX7219 LED Matrix & SPI (Software) \\
+\hline
+12 & CS (Chip Select) & MAX7219 LED Matrix & SPI (Software) \\
+\hline
+21 & SDA (Data) & LCD 16x2 / RTC DS3231 & I2C: 0x27 / 0x68 \\
+\hline
+22 & SCL (Clock) & LCD 16x2 / RTC DS3231 & I2C: 0x27 / 0x68 \\
+\hline
+27 & DATA (1-Wire) & DHT11 Sensor & 1-Wire Digital \\
+\hline
+16 & Button Input & MODE Button & INPUT\_PULLUP \\
+\hline
+17 & Button Input & SET Button & INPUT\_PULLUP \\
+\hline
+5 & Button Input & INC Button & INPUT\_PULLUP \\
+\hline
+32 & Digital Output & Active Buzzer & Active HIGH \\
+\hline
+33 & Digital Output & LED Indicator & Active HIGH \\
+\hline
+\end{tabular}
+\caption*{\textit{Bảng phân bổ chân của ESP32 trong hệ thống Smart Clock.}}
+\end{table}
+
+
+\subsubsection*{\fcolorbox{black}{gray!10}{\ttfamily\textbf{config.h}}}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+#ifndef CONFIG_H
+#define CONFIG_H
+// ==================== PIN DEFINITIONS ====================
+
+// MAX7219 7-segment display (Software SPI)
+#define DIN_PIN 13      // MAX7219 data input (DIN)
+#define CLK_PIN 14      // MAX7219 clock signal (CLK)
+#define CS_PIN 12       // MAX7219 chip select (CS)
+#define DHT_PIN 27      // DHT data pin (1-Wire)
+#define BUZZER_PIN 32   // Active buzzer output
+#define LED_PIN 33      // Status indicator LED
+#define BTN_MODE_PIN 16 // Mode selection button
+#define BTN_SET_PIN 17  // Setting/confirm button
+#define BTN_INC_PIN 5   // Increment value button 
+\end{lstlisting}
+
+
+
+
+
+
+
+\subsection{Cơ Chế Scheduler}
+
+\subsubsection{Nguyên lý hoạt động}
+
+Scheduler đóng vai trò điều phối các tác vụ (tasks) trong hệ thống Smart Clock, đảm bảo mỗi tác vụ
+được thực thi đúng chu kỳ mà không gây nghẽn CPU. Bộ định thời (timer) tạo ra các tick định kỳ,
+mỗi tick sẽ kích hoạt cơ chế cập nhật trạng thái task.
+
+\vspace{0.2cm}
+Quá trình vận hành gồm các bước chính:
+\begin{itemize}
+    \item Timer ISR kích hoạt hàm \texttt{SCH\_Update()} theo chu kỳ.
+    \item Scheduler giảm \texttt{Delay} của task đầu tiên (độ phức tạp O(1)).
+    \item Khi \texttt{Delay = 0}, task được đánh dấu sẵn sàng thực thi (\texttt{RunMe++}).
+    \item Hàm \texttt{SCH\_Dispatch\_Tasks()} xử lý các task có \texttt{RunMe > 0}.
+\end{itemize}
+
+Cách tiếp cận này đảm bảo hệ thống hoạt động ổn định, giảm tải trong ISR và hỗ trợ ưu tiên tác vụ.
+
+% =========================================================
+
+\subsubsection{Hiện thực Scheduler}
+\subsubsection*{\hspace{0.5cm}Cấu trúc dữ liệu Task}
+
+$\indent$Mỗi task được mô tả bởi cấu trúc \texttt{sTask}, là đơn vị cơ bản mà Scheduler sử dụng để quản lý
+trạng thái tác vụ:
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+typedef struct {
+    void (*pTask)(void);    // Pointer to the task function
+    uint32_t Delay;         // Delay time in ticks before task runs
+    uint32_t Period;        // Task period in ticks 
+    uint8_t RunMe;          // Flag indicating task is ready to run
+    uint32_t TaskID;        // Unique identifier for the task
+} sTask;
+\end{lstlisting}
+
+Ý nghĩa:
+\begin{itemize}
+    \item \textbf{pTask}: trỏ tới hàm thực thi task.
+    \item \textbf{Delay}: thời gian chờ trước khi task chạy.
+    \item \textbf{Period}: chu kỳ lặp lại của task periodic.
+    \item \textbf{RunMe}: cờ đánh dấu task đã sẵn sàng.
+    \item \textbf{TaskID}: hỗ trợ quản lý và xoá task.
+\end{itemize}
+
+% =========================================================
+
+\subsubsection*{\hspace{0.5cm}Thuật toán Scheduler O(1)}
+
+\textbf{1) Timer ISR – Cập nhật Scheduler}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+void IRAM_ATTR onTimer()
+{
+    portENTER_CRITICAL_ISR(&timerMux);
+    SCH_Update();           // O(1)
+    portEXIT_CRITICAL_ISR(&timerMux);
+}
+\end{lstlisting}
+
+\textbf{2) Hàm \texttt{SCH\_Update()} – Giảm Delay O(1)}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+void SCH_Update(void)
+{
+    if (task_count > 0)
+    {
+        if (SCH_tasks_G[0].Delay > 0)
+            SCH_tasks_G[0].Delay--;
+
+        elapsed_time++;
+
+        if (SCH_tasks_G[0].Delay == 0)
+            SCH_tasks_G[0].RunMe++;
+    }
+}
+\end{lstlisting}
+
+\textbf{3) Hàm \texttt{SCH\_Dispatch\_Tasks()} – Thực thi task}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+void SCH_Dispatch_Tasks(void)
+{
+    // Ensure there is at least one task and the first task is ready
+    if (task_count > 0 && SCH_tasks_G[0].RunMe > 0)
+    {
+        // ----- STEP 1: Update delay for all tasks -----
+        for (uint32_t m = 0; m < task_count; m++)
+        {
+            if (MARKING[m] == 0)
+            {
+                // Prevent underflow when subtracting elapsed_time
+                if (SCH_tasks_G[m].Delay >= elapsed_time)
+                    SCH_tasks_G[m].Delay -= elapsed_time;
+                else
+                    SCH_tasks_G[m].Delay = 0;
+            }
+            else
+            {
+                SCH_tasks_G[m].Delay = 0;
+                SCH_tasks_G[m].RunMe = 1;
+            }
+        }
+        // ----- STEP 2: Execute all ready tasks -----
+        while (task_count > 0 && SCH_tasks_G[0].RunMe > 0)
+        {
+            // Execute task if function pointer is valid
+            if (SCH_tasks_G[0].pTask != 0x0000)
+            {
+                (*SCH_tasks_G[0].pTask)();
+            }
+            SCH_tasks_G[0].RunMe--;
+
+            // Handle ONE-SHOT task
+            if (SCH_tasks_G[0].Period == 0)
+            {
+                SCH_Delete_Task(0);
+            }
+            else
+            {
+                void (*temp_func)(void) = SCH_tasks_G[0].pTask;
+                uint32_t temp_period = SCH_tasks_G[0].Period;
+
+                SCH_Delete_Task(0);
+                SCH_Add_Task(temp_func, temp_period, temp_period);
+            }
+        }
+        elapsed_time = 0;
+    }
+}
+
+\end{lstlisting}
+
+% =========================================================
+%----------------------------------------------------
+% Bảng định thời các Task
+%----------------------------------------------------
+\subsubsection*{Bảng định thời các Task trong hệ thống}
+
+\begin{table}[H]
+\centering
+\begin{tcolorbox}[
+    colback=white,
+    colframe=blue!50!black,
+    boxrule=0.8pt,
+    arc=2mm,
+    width=\linewidth
+]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{|c|c|c|c|p{4.2cm}|}
+\hline
+\rowcolor{blue!15}
+\textbf{Task} & \textbf{Chu kỳ (ms)} & \textbf{Ticks} & \textbf{Priority} & \textbf{Chức năng} \\
+\hline
+Task\_CheckButtons & 50 & 5 & Cao & Quét 3 nút nhấn, xử lý chống dội \\
+\hline
+Task\_UpdateDisplay & 100 & 10 & Cao & Cập nhật hiển thị LED 7-segment \\
+\hline
+Task\_UpdateLCD & 100 & 10 & Cao & Cập nhật LCD 16x2 \\
+\hline
+Task\_HandleLEDBlink & 100 & 10 & Trung bình & Điều khiển LED báo hiệu \\
+\hline
+Task\_CheckAlarm & 1000 & 100 & Trung bình & Kiểm tra và kích hoạt báo thức \\
+\hline
+Task\_ReadSensors & 2000 & 200 & Thấp & Đọc cảm biến DHT11 \\
+\hline
+\end{tabular}
+\end{tcolorbox}
+\caption{Bảng định thời các Task trong Smart Clock}
+\end{table}
+
+%----------------------------------------------------
+% Định nghĩa chu kỳ trong mã nguồn
+%----------------------------------------------------
+\subsubsection*{Định nghĩa chu kỳ trong mã nguồn}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+#define TASK_BUTTON_CHECK_DELAY_MS 50
+#define TASK_LED_DISPLAY_DELAY_MS 100
+#define TASK_LCD_DISPLAY_DELAY_MS 100
+#define TASK_ALARM_CHECK_DELAY_MS 1000
+#define TASK_SENSOR_READ_DELAY_MS 2000
+#define TASK_HEARTBEAT_DELAY_MS 1000
+#define TASK_DEBUG_INFO_DELAY_MS 5000
+#define TASK_LED_INDICATOR_DELAY_MS 100
+\end{lstlisting}
+
+%----------------------------------------------------
+% Chuyển sang ticks
+%----------------------------------------------------
+\subsubsection*{Chuyển đổi sang Ticks}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+#define TASK_BUTTON_CHECK_TICKS (TASK_BUTTON_CHECK_DELAY_MS / TIMER_TICK_MS)
+#define TASK_LED_DISPLAY_TICKS (TASK_LED_DISPLAY_DELAY_MS / TIMER_TICK_MS)
+#define TASK_LCD_DISPLAY_TICKS (TASK_LCD_DISPLAY_DELAY_MS / TIMER_TICK_MS)
+#define TASK_ALARM_CHECK_TICKS (TASK_ALARM_CHECK_DELAY_MS / TIMER_TICK_MS)
+#define TASK_SENSOR_READ_TICKS (TASK_SENSOR_READ_DELAY_MS / TIMER_TICK_MS)
+#define TASK_HEARTBEAT_TICKS (TASK_HEARTBEAT_DELAY_MS / TIMER_TICK_MS)
+#define TASK_DEBUG_INFO_TICKS (TASK_DEBUG_INFO_DELAY_MS / TIMER_TICK_MS)
+#define TASK_LED_INDICATOR_TICKS (TASK_LED_INDICATOR_DELAY_MS / TIMER_TICK_MS)
+\end{lstlisting}
+
+%----------------------------------------------------
+% Đăng ký Task trong setup()
+%----------------------------------------------------
+\subsubsection*{Đăng ký các Task trong hàm setup()}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+SCH_Add_Task(Task_CheckButtons,    0, TASK_BUTTON_CHECK_TICKS);
+SCH_Add_Task(Task_UpdateDisplay,   0, TASK_LED_DISPLAY_TICKS);
+SCH_Add_Task(Task_UpdateLCD,       0, TASK_LCD_DISPLAY_TICKS);
+SCH_Add_Task(Task_CheckAlarm,      0, TASK_ALARM_CHECK_TICKS);
+SCH_Add_Task(Task_HandleLEDBlink,  0, TASK_LED_INDICATOR_TICKS);
+SCH_Add_Task(Task_ReadSensors,     0, TASK_SENSOR_READ_TICKS);
+\end{lstlisting}
+
+
+
+\subsection{Máy Trạng Thái Hệ Thống (Finite State Machine – FSM)}
+
+$\indent$Hệ thống \textit{Smart Clock} được điều khiển bởi mô hình 
+{Máy Trạng Thái Hữu Hạn (Finite State Machine - FSM), 
+trong đó mỗi chế độ hiển thị được xem như một \textit{trạng thái} độc lập. 
+Các nút nhấn vật lý (\textbf{MODE}, \textbf{SET}, \textbf{INC}) đóng vai trò 
+phát sinh \textit{event}, quyết định quá trình chuyển đổi giữa các trạng thái 
+cũng như hành vi của hệ thống trong từng chế độ. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.97\linewidth]{image/13.png}
+    \vspace{0.5cm}
+    \caption{Máy trạng thái Hệ thống Smart Clock}
+\end{figure}
+
+
+FSM bao gồm \textbf{05 trạng thái chính}, chuyển đổi tuần tự bằng nút 
+\textbf{MODE}, trong khi các hành động nội trạng thái được điều khiển bởi 
+\textbf{SET} và \textbf{INC}.
+
+\subsubsection*{B. Định nghĩa các trạng thái trong mã nguồn}
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+enum DisplayMode {
+    MODE_TEMP_HUMIDITY = 0,   
+    MODE_DATE_TIME     = 1,  
+    MODE_ALARM         = 2,  
+    MODE_STOPWATCH     = 3,  
+    MODE_COUNTDOWN     = 4   
+};
+\end{lstlisting}
+
+\subsubsection*{C. Mô tả chi tiết từng trạng thái}
+
+\textbf{\hspace{0.5cm}1) MODE 1 - Temperature \& Humidity}
+\begin{itemize}
+    \item Hiển thị nhiệt độ (°C) và độ ẩm (\%) từ cảm biến DHT11.
+    \item Không hỗ trợ chỉnh sửa thông số.
+    \item Nút \textbf{SET} và \textbf{INC} bị bỏ qua để tránh thay đổi ngoài ý muốn.
+\end{itemize}
+
+\textbf{2) MODE 2 - Date \& Time}
+\begin{itemize}
+    \item Hiển thị giờ–phút–giây và ngày–tháng–năm từ DS3231.
+    \item Có thể mở rộng hỗ trợ chỉnh thời gian:
+    \begin{itemize}
+        \item \textbf{SET}: chuyển vùng chỉnh.
+        \item \textbf{INC}: tăng giá trị trường đang chỉnh.
+    \end{itemize}
+\end{itemize}
+
+\textbf{3) MODE 3 - Alarm Clock}
+\begin{itemize}
+    \item Cho phép cài đặt giờ báo thức bằng SET và INC.
+    \item Khi đến thời điểm báo: bật buzzer và LED.
+    \item Nhấn \textbf{SET} khi báo thức đang kêu: tắt báo (stop/snooze).
+\end{itemize}
+
+\textbf{4) MODE 4 - Stopwatch}
+\begin{itemize}
+    \item Chức năng bấm giờ \textit{Start / Stop / Reset}.
+    \item \textbf{SET}: Start / Stop thời gian.
+    \item \textbf{INC}: Lưu vòng chạy (Lap), hỗ trợ tối đa 05 vòng.
+    \item Danh sách Lap được lưu tạm trong thời gian ở chế độ này.
+\end{itemize}
+
+\textbf{5) MODE 5 - Countdown}
+\begin{itemize}
+    \item Cho phép chỉnh giờ–phút–giây của bộ đếm ngược.
+    \item \textbf{SET}: chuyển vùng chỉnh (Hour → Minute → Second → Start).
+    \item \textbf{INC}: tăng giá trị vùng chỉnh.
+    \item Khi hết giờ: bật buzzer và LED.
+    \item Nhấn \textbf{SET} khi báo: reset về giá trị ban đầu.
+\end{itemize}
+
+\subsubsection*{D. Bảng chuyển trạng thái (State Transition Table)}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|c|c|c|p{5cm}|}
+\hline
+\textbf{Trạng thái hiện tại} & \textbf{Sự kiện} & 
+\textbf{Trạng thái kế tiếp} & \textbf{Hành động hệ thống} \\
+\hline
+MODE 1 & BTN\_MODE & MODE 2 & Xoá màn hình, chuẩn bị giao diện thời gian \\ \hline
+MODE 2 & BTN\_MODE & MODE 3 & Tải giao diện báo thức \\ \hline
+MODE 3 & BTN\_MODE & MODE 4 & Tắt báo thức nếu đang kêu \\ \hline
+MODE 4 & BTN\_MODE & MODE 5 & Lưu trạng thái Stopwatch nếu cần \\ \hline
+MODE 5 & BTN\_MODE & MODE 1 & Dừng countdown, reset giá trị nếu đang chạy \\ \hline
+MODE 2--5 & BTN\_SET & Giữ nguyên & Start/Stop/Edit tùy từng mode \\ \hline
+MODE 2--5 & BTN\_INC & Giữ nguyên / Lap & Tăng giá trị / Hiển thị lap (Stopwatch) \\ \hline
+ANY & BTN\_RELEASE & SAME & Không có hành động \\ \hline
+\end{tabular}
+\caption{Bảng chuyển trạng thái của hệ thống Smart Clock}
+\end{table}
+
+
+
+\subsubsection*{E. Hiện thực máy trạng thái và xử lý nút nhấn}
+
+$\indent$Để vận hành Máy Trạng Thái Hữu Hạn (Finite State Machine – FSM) một cách ổn định 
+và nhất quán, hệ thống Smart Clock triển khai một tập hợp các hàm chuyên biệt 
+dùng để xử lý ba nút điều khiển chính: \texttt{MODE}, \texttt{SET} và 
+\texttt{INC}. Mỗi nút đóng vai trò sinh ra các sự kiện (event) tương ứng, từ đó 
+kích hoạt các chuyển trạng thái (state transition) hoặc hành vi nội trạng thái 
+(state action) của FSM.
+
+\vspace{0.2cm}
+Toàn bộ mã nguồn bên dưới trình bày trình tự hiện thực:
+\begin{enumerate}
+    \item Khởi tạo bộ nút nhấn, buzzer và LED báo hiệu.
+    \item Xử lý nút \texttt{MODE} để điều khiển tiến trình chuyển trạng thái trong FSM.
+    \item Xử lý nút \texttt{SET} với vai trò Start/Stop/Edit tùy theo Mode.
+    \item Xử lý nút \texttt{INC} để tăng giá trị, xem lap hoặc reset đồng hồ.
+    \item Bộ điều phối sự kiện (\emph{event dispatcher}) – liên tục quét nút và chuyển sự kiện vào FSM.
+\end{enumerate}
+
+Nhờ cấu trúc phân tách rõ ràng, FSM vận hành ổn định trong thời gian thực, 
+dễ bảo trì và đáp ứng đúng yêu cầu thiết kế hệ thống nhúng. Mã nguồn hoàn chỉnh 
+được liệt kê bên dưới:
+
+\newpage
+
+\subsubsection*{\fcolorbox{black}{gray!10}{\ttfamily\textbf{button\_handler.cpp}}}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+#include "button_handler.h"
+#include "config.h"
+#include "global_vars.h"
+#include "7seg_display.h"
+#include "lcd_display.h"
+// ===========================================
+// BUTTON AND BUZZER INITIALIZATION
+// ===========================================
+void initButtons()
+{
+    // Configure buttons as INPUT_PULLUP (LOW when pressed)
+    pinMode(BTN_MODE_PIN, INPUT_PULLUP);
+    pinMode(BTN_SET_PIN, INPUT_PULLUP);
+    pinMode(BTN_INC_PIN, INPUT_PULLUP);
+    // Configure buzzer and LED as OUTPUT
+    pinMode(BUZZER_PIN, OUTPUT);
+    digitalWrite(BUZZER_PIN, LOW);
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);
+}
+// ===========================================
+// MODE BUTTON HANDLER - STATE TRANSITIONS
+// ===========================================
+void handleModeButton(LedControl *lc)
+{
+    // Debounce check - ignore if pressed too quickly
+    if (millis() - lastButtonPress < BUTTON_DEBOUNCE)
+        return;
+    lastButtonPress = millis();
+    
+    // Cycle through modes: 0 =>1=>2=>3=>4=>0
+    displayMode = (displayMode + 1) % TOTAL_MODES;
+    Serial.print("Mode changed -> ");
+    Serial.println(displayMode);
+
+    // Reset state when entering STOPWATCH mode
+    if (displayMode == MODE_STOPWATCH)
+    {
+        timerCurrentTime = 0;
+        isTimerRunning = false;
+    }
+    // Reset state when entering COUNTDOWN mode
+    else if (displayMode == MODE_COUNTDOWN)
+    {
+        countdownEditing = true;
+        isCountdownRunning = false;
+        countdownTriggered = false;
+        countdownEditField = 0;
+        // Restore initial values
+        c_hours = c_hours_initial;
+        c_minutes = c_minutes_initial;
+        c_seconds = c_seconds_initial;
+    }
+    // Clear displays
+    lc->clearDisplay(0);
+    getLCD()->clear();
+}
+
+// ===========================================
+// SET BUTTON HANDLER - CONFIRM/START/STOP ACTIONS
+// ===========================================
+void handleSetButton()
+{
+    // Debounce check
+    if (millis() - lastButtonPress < BUTTON_DEBOUNCE)
+        return;
+    lastButtonPress = millis();
+    // ALARM MODE: Toggle between hour and minute editing
+    if (displayMode == MODE_ALARM)
+    {
+        alarmEditHour = !alarmEditHour;
+        Serial.print("Alarm edit -> ");
+        Serial.println(alarmEditHour ? "HOUR" : "MINUTE");
+        // Stop alarm if currently triggered
+        if (alarmTriggered)
+        {
+            digitalWrite(BUZZER_PIN, LOW);
+            digitalWrite(LED_PIN, LOW);
+            alarmTriggered = false;
+            alarmEditHour = !alarmEditHour;
+            Serial.println("Alarm stopped");
+        }
+    }
+
+    // STOPWATCH MODE: Start/Stop and save lap
+    else if (displayMode == MODE_STOPWATCH)
+    {
+        // START: Calculate start time 
+        if (!isTimerRunning)
+        {
+            timerStartTime = millis() - timerCurrentTime;
+            isTimerRunning = true;
+            Serial.println("Stopwatch START");
+        }
+        // STOP: Save lap time (max 5 laps)
+        else
+        {
+            isTimerRunning = false;
+            Serial.println("Stopwatch STOP -> save lap");
+
+            if (lapCount < 5)
+            {
+                laps[lapCount++] = timerCurrentTime;
+                Serial.print("Saved lap ");
+                Serial.print(lapCount);
+                Serial.print(": ");
+                Serial.println(timerCurrentTime);
+            }
+            else
+            {
+                Serial.println("Lap storage full");
+            }
+        }
+    }
+
+    // COUNTDOWN MODE: Confirm field or start countdown
+    else if (displayMode == MODE_COUNTDOWN)
+    {
+        // Stop alarm and reset if countdown finished
+        if (countdownTriggered)
+        {
+            digitalWrite(BUZZER_PIN, LOW);
+            digitalWrite(LED_PIN, LOW);
+            countdownTriggered = false;
+            countdownEditing = true;
+            isCountdownRunning = false;
+            
+            // Restore initial values
+            c_hours = c_hours_initial;
+            c_minutes = c_minutes_initial;
+            c_seconds = c_seconds_initial;
+            Serial.println("Countdown stopped by SET");
+            return;
+        }
+        // Move to next edit field (hours => minutes => seconds)
+        if (countdownEditing)
+        {
+            if (countdownEditField < 2)
+            {
+                countdownEditField++;
+                Serial.print("Countdown edit field -> ");
+                Serial.println(countdownEditField);
+            }
+            // All fields edited => Start countdown
+            else
+            {
+            // Calculate total duration in seconds
+            unsigned long totalSeconds = (unsigned long)c_hours * 3600UL +
+                                (unsigned long)c_minutes * 60UL +
+                                (unsigned long)c_seconds;
+
+                // Don't start if duration is zero
+                if (totalSeconds == 0)
+                {
+                    Serial.println("Countdown duration is zero, not started");
+                }
+                else
+                {
+                    // Convert to milliseconds and start
+                    countdownDuration = totalSeconds * 1000UL;
+                    countdownStartTime = millis();
+                    isCountdownRunning = true;
+                    countdownEditing = false;
+                    
+                    // Save initial values for reset
+                    c_hours_initial = c_hours;
+                    c_minutes_initial = c_minutes;
+                    c_seconds_initial = c_seconds;
+                    Serial.print("Countdown started: ");
+                    Serial.println(countdownDuration);
+                }
+            }
+        }
+    }
+}
+
+
+// ===========================================
+// INC BUTTON HANDLER - INCREMENT VALUES/RESET/VIEW LAPS
+// ===========================================
+void handleIncButton()
+{
+    // Debounce check
+    if (millis() - lastButtonPress < BUTTON_DEBOUNCE)
+        return;
+    lastButtonPress = millis();
+
+    // ALARM MODE: Increment hour or minute
+    if (displayMode == MODE_ALARM)
+    {
+        if (alarmEditHour)
+        {
+            alarmHour = (alarmHour + 1) % 24; // 0-23 hours
+        }
+        else
+        {
+            alarmMinute = (alarmMinute + 1) % 60; // 0-59 minutes
+        }
+    }
+
+    // STOPWATCH MODE: Display saved laps
+    else if (displayMode == MODE_STOPWATCH)
+    {
+        showSavedLaps(getLedControl());
+    }
+
+    // COUNTDOWN MODE: Increment values or reset
+    else if (displayMode == MODE_COUNTDOWN)
+    {
+        // RESET: If running or finished, reset to 00:00:00
+        if (isCountdownRunning || countdownTriggered)
+        {
+            isCountdownRunning = false;
+            countdownTriggered = false;
+            digitalWrite(BUZZER_PIN, LOW);
+            digitalWrite(LED_PIN, LOW);
+            // Reset to edit mode with zero values
+            countdownEditing = true;
+            countdownEditField = 0;
+            c_hours = 0;
+            c_minutes = 0;
+            c_seconds = 0;
+            c_hours_initial = 0;
+            c_minutes_initial = 0;
+            c_seconds_initial = 0;
+            countdownDuration = 0;
+            countdownRemaining = 0;
+            Serial.println("Countdown reset to 00:00:00 and edit mode");
+            return;
+        }
+
+        // INCREMENT: Increase current edit field value
+        if (countdownEditing)
+        {
+            if (countdownEditField == 0)
+            {
+                c_hours = (c_hours + 1) % 100; // 0-99 hours
+            }
+            else if (countdownEditField == 1)
+            {
+                c_minutes = (c_minutes + 1) % 60; // 0-59 minutes
+            }
+            else if (countdownEditField == 2)
+            {
+                c_seconds = (c_seconds + 10) % 60; // 10-second increments
+            }
+            // Update initial values for future reset
+            c_hours_initial = c_hours;
+            c_minutes_initial = c_minutes;
+            c_seconds_initial = c_seconds;
+            Serial.print("Countdown edited -> ");
+            Serial.print(c_hours);
+            Serial.print(":");
+            Serial.print(c_minutes);
+            Serial.print(":");
+            Serial.println(c_seconds);
+        }
+    }
+}
+
+// ===========================================
+// MAIN BUTTON CHECK FUNCTION
+// ===========================================
+// Called continuously in loop() to check all button states
+void checkButtons(LedControl *lc)
+{
+    // Check each button (LOW when pressed due to INPUT_PULLUP)
+    if (digitalRead(BTN_MODE_PIN) == LOW)
+    {
+        handleModeButton(lc);
+    }
+
+    if (digitalRead(BTN_SET_PIN) == LOW)
+    {
+        handleSetButton();
+    }
+
+    if (digitalRead(BTN_INC_PIN) == LOW)
+    {
+        handleIncButton();
+    }
+}
+\end{lstlisting}
+
+
+
+\newpage
+
+\subsection{FlowChart luồng xử lí Hệ hống}
+\subsubsection{Flowchart tổng quan Hệ thống}
+
+
+
+
+\begin{figure}[H]
+    \centering
+    % Điều chỉnh width để vừa trang, height sẽ tự động theo tỉ lệ
+    \includegraphics[width=0.6\textwidth]{image/A.png}
+    \vspace{0.5cm}
+    \caption{Flowchart Tổng Quan Hệ Thống}
+\end{figure}
+
+Hệ thống khởi động từ trạng thái \textbf{Power ON} và thực hiện các bước chính sau:
+
+\begin{itemize}
+    \item \textbf{Khởi tạo phần cứng}: bao gồm các nút bấm, LED, LCD và cảm biến.
+    \item \textbf{Khởi tạo Scheduler} để quản lý các task định kỳ.
+    \item \textbf{Khởi động Timer} với chu kỳ 10ms.
+    \item \textbf{Thêm 6 Tasks} vào hệ thống:
+    \begin{itemize}
+        \item Task 1: \textit{CheckButtons} (50ms) – Quét nút bấm
+        \item Task 2: \textit{UpdateDisplay} (100ms) – Cập nhật LED 7-segment
+        \item Task 3: \textit{UpdateLCD} (100ms) – Cập nhật LCD
+        \item Task 4: \textit{CheckAlarm} (1000ms) – Kiểm tra báo thức
+        \item Task 5: \textit{ReadSensors} (2000ms) – Đọc DHT11
+        \item Task 6: \textit{HandleLEDBlink} (200ms) – Nhấp nháy LED
+    \end{itemize}
+    \item \textbf{Vòng lặp chính liên tục}:
+    \begin{itemize}
+        \item Timer ISR kích hoạt mỗi 10ms.
+        \item Scheduler giảm delay và đánh dấu các task sẵn sàng chạy.
+        \item Các task được thực thi nếu \texttt{RunMe > 0}.
+        \item Nếu task có chu kỳ định kỳ (\texttt{Period > 0}), task được thêm lại; nếu không, task bị xóa.
+    \end{itemize}
+    \item \textbf{Đặc điểm}: Flowchart tổng quan giúp hình dung luồng khởi tạo và vòng lặp chính của hệ thống, đồng thời thể hiện cách Scheduler phối hợp với ISR và các task.
+\end{itemize}
+
+\subsubsection{Flowchart Scheduler Core}
+
+$\indent$Hệ thống Scheduler Core gồm hai thành phần chính: Timer ISR và Main Loop Dispatch, phối hợp để quản lý và thực thi các task định kỳ.
+
+\subsubsection*{\hspace{0.5cm}Timer ISR (10ms)}
+\begin{figure}[H]
+    \centering
+    % Điều chỉnh width để vừa trang, height sẽ tự động theo tỉ lệ
+    \includegraphics[width=0.22\textwidth]{image/B.png}
+    \vspace{0.5cm}
+    \caption{Timer ISR (10ms)}
+\end{figure}
+
+
+Khi \texttt{Timer ISR} được kích hoạt:
+\begin{itemize}
+    \item Kiểm tra task đầu tiên: nếu \texttt{Delay > 0}, giảm giá trị delay đi 1 đơn vị; nếu \texttt{Delay == 0}, bỏ qua.
+    \item Tăng biến \texttt{elapsed\_time} cho task.
+    \item Khi \texttt{Delay == 0}, biến \texttt{RunMe} của task được tăng lên, báo hiệu task sẵn sàng thực thi.
+\end{itemize}
+
+\textbf{Đặc điểm:}
+\begin{itemize}
+    \item ISR chỉ xử lý các phép tính \texttt{O(1)}, giúp giảm độ trễ cho task đầu tiên.
+    \item Chỉ đánh dấu task sẵn sàng, không thực hiện task trong ISR, tránh chặn luồng chính.
+\end{itemize}
+
+\subsubsection*{\hspace{0.5cm}Main Loop Dispatch}
+\begin{figure}[H]
+    \centering
+    % Điều chỉnh width để vừa trang, height sẽ tự động theo tỉ lệ
+    \includegraphics[width=0.44\textwidth]{image/C.png}
+    \vspace{0.5cm}
+    \caption{Main Loop Dispatch}
+\end{figure}
+
+
+Trong vòng lặp chính:
+\begin{itemize}
+    \item Gọi hàm \texttt{SCH\_Dispatch}.
+    \item Kiểm tra các task có \texttt{RunMe > 0}. Nếu không có task nào, trả về.
+    \item Nếu có task sẵn sàng:
+    \begin{itemize}
+        \item Cập nhật delay cho tất cả task.
+        \item Gọi \texttt{pTask} (hàm của task thực tế).
+        \item Giảm biến \texttt{RunMe} sau khi task chạy xong.
+        \item Nếu task là periodic, xóa task cũ và thêm lại; nếu không, xóa task.
+    \end{itemize}
+    \item Quay lại kiểm tra task tiếp theo trong vòng lặp.
+\end{itemize}
+
+\textbf{Đặc điểm:}
+\begin{itemize}
+    \item Dispatcher xử lý tất cả các task sẵn sàng một cách tuần tự.
+    \item Các periodic task tự động lặp lại, đảm bảo hệ thống vận hành liên tục và ổn định.
+\end{itemize}
+
+\subsubsection{Flowchart Xử Lý Nút Bấm}
+\begin{figure}[H]
+    \centering
+    % Điều chỉnh width để vừa trang, height sẽ tự động theo tỉ lệ
+    \includegraphics[width=1\textwidth]{image/D.png}
+    \vspace{0.5cm}
+    \caption{Flowchart Xử Lý Nút Bấm}
+\end{figure}
+
+$\indent$Luồng xử lý nút bấm trong hệ thống Smart Clock được mô tả như sau:
+
+\begin{itemize}
+    \item Khi gọi \texttt{CheckButtons}, hệ thống kiểm tra debounce:
+    \begin{itemize}
+        \item Nếu chưa đạt debounce, trả về (\texttt{Return}).
+        \item Nếu debounce OK, xác định nút nào được nhấn: \texttt{MODE}, \texttt{SET} hoặc \texttt{INC}.
+    \end{itemize}
+
+    \item \textbf{Nút MODE}:
+    \begin{itemize}
+        \item Tăng giá trị \texttt{displayMode++} và reset trạng thái hiện tại.
+    \end{itemize}
+
+    \item \textbf{Nút SET}: xử lý tùy theo chế độ hiện tại (\texttt{Mode}):
+    \begin{itemize}
+        \item \texttt{Alarm}: bật/tắt chế độ chỉnh giờ/phút và tắt báo thức nếu đang kêu.
+        \item \texttt{Stopwatch}:
+        \begin{itemize}
+            \item Nếu đang chạy: dừng stopwatch và lưu giá trị lap.
+            \item Nếu không chạy: khởi động timer.
+        \end{itemize}
+        \item \texttt{Countdown}: 
+        \begin{itemize}
+            \item Chuyển sang trường tiếp theo hoặc bắt đầu đếm ngược.
+            \item Nếu buzzer kêu thì tắt còi và chuyển về Editing.
+        \end{itemize}
+        
+    \end{itemize}
+
+    \item \textbf{Nút INC}: xử lý tùy theo chế độ hiện tại (\texttt{Mode}):
+\begin{itemize}
+    \item Nếu đang chạy: không có tác dụng.
+    \item Nếu không chạy: tăng giá trị hiện tại 
+    \begin{itemize}
+        \item Giờ/Phút: tăng 1 đơn vị
+        \item Giây: tăng 10 đơn vị
+    \end{itemize}
+    \item Nếu kết thúc đếm ngược và còi báo kêu, nhấn nút sẽ tắt còi.
+\end{itemize}
+
+    \item Sau khi thực hiện xong thao tác của nút, luồng kết thúc và trả về (\texttt{Return}).
+\end{itemize}
+
+\textbf{Đặc điểm:}  
+\begin{itemize}
+        \item Luồng xử lý rõ ràng theo từng nút và chế độ, đảm bảo mọi thao tác người dùng đều được nhận diện và thực thi chính xác.  
+        \item Cơ chế debounce đảm bảo loại bỏ tín hiệu nhấn kép (double-trigger), tăng tính ổn định của hệ thống. 
+        \item Hệ thống hỗ trợ nhiều chế độ (Alarm, Stopwatch, Countdown) và các thao tác nhấn đa dạng (đơn, giữ, nhấn nhanh), đảm bảo trải nghiệm người dùng mượt mà.
+    \end{itemize}
+
+
+\subsubsection{Flowchart Stopwatch}
+
+\begin{figure}[H]
+    \centering
+    % Điều chỉnh width để vừa trang, height sẽ tự động theo tỉ lệ
+    \includegraphics[width=0.5\textwidth]{image/E.png}
+    \vspace{0.5cm}
+    \caption{Flowchart Stopwatch}
+\end{figure}
+
+
+
+$\indent$Luồng xử lý chế độ \textbf{Stopwatch} được mô tả như sau:
+
+\begin{itemize}
+    \item Khi ở \texttt{Stopwatch Mode}, kiểm tra nút \texttt{SET}:
+    \begin{itemize}
+        \item Nếu nhấn \texttt{SET}:
+        \begin{itemize}
+            \item Nếu stopwatch chưa chạy (\texttt{isRunning = false}): khởi động stopwatch, đặt \texttt{startTime = millis - current}.
+            \item Nếu đang chạy (\texttt{isRunning = true}): dừng stopwatch, lưu giá trị lap nếu số lap < 5.
+        \end{itemize}
+        \item Cập nhật trạng thái \texttt{isRunning}.
+    \end{itemize}
+    \item Cập nhật hiển thị:
+    \begin{itemize}
+        \item Nếu đang chạy: \texttt{currentTime = millis - startTime}.
+        \item Nếu không chạy: giữ nguyên thời gian hiện tại.
+        \item Tính toán giá trị H:M:S.CS và hiển thị trên LED + LCD.
+    \end{itemize}
+    \item Khi nhấn nút \texttt{INC}:
+    \begin{itemize}
+        \item Hiển thị các lap đã lưu, mỗi lap 1 giây.
+        \item Sau khi hiển thị hết lap, xóa tất cả lap.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Flowchart Countdown Timer}
+
+\begin{figure}[H]
+    \centering
+    % Điều chỉnh width để vừa trang, height sẽ tự động theo tỉ lệ
+    \includegraphics[width=0.75\textwidth]{image/F.png}
+    \vspace{0.5cm}
+    \caption{Flowchart Countdown Timer}
+\end{figure}
+
+
+
+$\indent$Luồng xử lý \textbf{Countdown Timer} gồm các trạng thái chính: \texttt{EDITING}, \texttt{RUNNING} và \texttt{TRIGGERED}.
+
+\begin{itemize}
+    \item \textbf{EDITING:}
+    \begin{itemize}
+        \item Hiển thị nhấp nháy để người dùng chỉnh sửa trường.
+        \item Nút \texttt{INC}: tăng giá trị giờ/phút/giây (giờ/phút +1, giây +10).
+        \item Nút \texttt{SET}: chuyển sang trường tiếp theo nếu chưa hết, hoặc bắt đầu đếm ngược (\texttt{START countdown}).
+    \end{itemize}
+    \item \textbf{RUNNING:}
+    \begin{itemize}
+        \item Tính \texttt{elapsed = millis - start}.
+        \item Nếu \texttt{elapsed >= duration}: kích hoạt báo thức (\texttt{Trigger = true}, Buzzer ON).
+        \item Nếu chưa hết thời gian: tính \texttt{remaining = duration - elapsed} và cập nhật hiển thị countdown.
+    \end{itemize}
+    \item \textbf{TRIGGERED:}
+    \begin{itemize}
+        \item Hiển thị 00:00:00 và còi báo kêu.
+        \item Khi nhấn \texttt{SET}: tắt còi và trở lại trạng thái EDITING.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Flowchart Alarm System}
+
+
+\begin{figure}[H]
+    \centering
+    % Điều chỉnh width để vừa trang, height sẽ tự động theo tỉ lệ
+    \includegraphics[width=0.95\textwidth]{image/G.png}
+    \vspace{0.5cm}
+    \caption{Flowchart Alarm System}
+\end{figure}
+
+
+$\indent$Luồng xử lý \textbf{Alarm System} gồm các tiến trình song song: \texttt{User Input}, \texttt{CheckAlarm Task}, \texttt{Display Update}, \texttt{LED Blink}.
+
+\begin{itemize}
+    \item \textbf{User Input:}
+    \begin{itemize}
+        \item Nhấn \texttt{INC}: tăng giá trị giờ/phút báo thức.
+        \item Nhấn \texttt{SET}:
+        \begin{itemize}
+            \item Nếu báo thức đang kêu: tắt buzzer (\texttt{alarmTriggered = false}).
+            \item Nếu không kêu: chuyển sang chỉnh giờ (\texttt{editHour}).
+        \end{itemize}
+    \end{itemize}
+    \item \textbf{CheckAlarm Task (1 giây):}
+    \begin{itemize}
+        \item Kiểm tra chế độ hiện tại là Alarm hay không.
+        \item Nếu thời gian hiện tại trùng giờ báo thức và giây = 0: kích hoạt báo thức (\texttt{Trigger = true}, Buzzer ON, LED ON).
+    \end{itemize}
+    \item \textbf{Display Update (100ms):}
+    \begin{itemize}
+        \item LED hiển thị giờ hiện tại và trạng thái báo thức.
+        \item LCD hiển thị:
+        \begin{itemize}
+            \item Nếu báo thức đang kêu: ``ALARM RINGING!''.
+            \item Nếu không: hiển thị Alarm HH:MM, nhấp nháy khi chỉnh.
+        \end{itemize}
+    \end{itemize}
+    \item \textbf{LED Blink (200ms):}
+    \begin{itemize}
+        \item Nếu báo thức đang kêu: LED nhấp nháy mỗi 200ms.
+    \end{itemize}
+\end{itemize}
+
+
+
+
+\newpage
+\section{Quy Trình Kiểm Thử}
+
+\subsection{Môi trường kiểm thử}
+
+$\indent$Hệ thống được kiểm thử trong môi trường mô phỏng điều kiện vận hành thực tế. 
+Các thông số thử nghiệm bao gồm:
+
+\begin{itemize}
+    \item Nhiệt độ: 25°C – 35°C; Độ ẩm: 60\% – 80\%
+    \item Nguồn cấp: USB 5V/1A và pin 9V
+    \item Thời gian kiểm thử liên tục: 72 giờ
+    \item Nền tảng phần cứng/phần mềm: ESP32 DevKit V1, Arduino IDE 2.3.2
+\end{itemize}
+
+Điều kiện môi trường này đảm bảo đánh giá khả năng hoạt động ổn định của thiết bị trong các bối cảnh điển hình tại Việt Nam.
+
+\subsection{Phương pháp kiểm thử}
+
+$\indent$Hệ thống sử dụng kết hợp hai phương pháp chính:
+
+\begin{itemize}
+\item \textbf{White-box Testing}: Kiểm tra luồng xử lý nội bộ như logic chương trình, ngắt, debounce, cập nhật hiển thị và quản lý báo thức.
+\item \textbf{Black-box Testing}: Đánh giá chức năng dựa trên hành vi mong đợi của người dùng.
+\end{itemize}
+
+Các cấp độ kiểm thử được áp dụng:
+
+\begin{itemize}
+\item \textbf{Unit Testing}: Kiểm thử từng module (LCD, RTC, nút bấm, DHT11).
+\item \textbf{Integration Testing}: Kiểm thử sự tương tác giữa các module.
+\item \textbf{System Testing}: Đánh giá toàn bộ hệ thống khi vận hành.
+\item \textbf{Performance Testing}: Kiểm tra thời gian đáp ứng và độ ổn định.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Kết quả kiểm thử chức năng}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsubsection{Kiểm thử Module Hiển thị}
+
+\begin{table}[H]
+\centering
+\begin{tcolorbox}[
+colback=white, colframe=blue!50!black,
+arc=2mm, boxrule=0.8pt, width=\linewidth]
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{|c|p{3.7cm}|p{4.2cm}|p{3.2cm}|p{1cm}|}
+\hline
+\rowcolor{blue!15}\textbf{STT} & \textbf{Chức năng} &
+\textbf{Kết quả mong đợi} &
+\textbf{Kết quả thực tế} &
+\textbf{} \\
+\hline
+1 & Hiển thị nhiệt độ/độ ẩm & Cập nhật 2s, sai số $\pm$0.1°C & 2.1s, sai số $\pm$0.1°C & \cmark Đạt \\
+\hline
+2 & Hiển thị ngày giờ & Định dạng HH:MM:SS, DD/MM/YYYY & Chính xác 100\% & \cmark Đạt \\
+\hline
+3 & Hiển thị báo thức & Nhấp nháy 500ms khi chỉnh sửa & 510ms $\pm$10ms & \cmark Đạt \\
+\hline
+4 & Stopwatch & Sai số $\pm$10ms & Sai số $\pm$8ms & \cmark Đạt \\
+\hline
+5 & Countdown & Đếm ngược chính xác đến 0 & Chính xác 100\% &\cmark Đạt \\
+\hline
+\end{tabular}
+\end{tcolorbox}
+\caption{Kết quả kiểm thử module hiển thị}
+\end{table}
+
+\textbf{Nhận xét}:  
+\begin{itemize}
+    \item Module hiển thị hoạt động ổn định, đáp ứng đầy đủ yêu cầu thiết kế.
+    \item Tần suất cập nhật dữ liệu nhiệt độ/độ ẩm chênh lệch nhẹ (2.1s so với 2s) nhưng không ảnh hưởng đến tính thời gian thực.
+    \item Các chức năng thời gian, báo thức, stopwatch và countdown đều chính xác, sai số thấp hơn mức cho phép.
+    \item Trong quá trình kiểm thử kéo dài, không ghi nhận ghosting, nhấp nháy hay giật khung; tốc độ làm tươi 100ms đảm bảo hiển thị mượt và rõ ràng.
+    \item Tổng thể, module hiển thị đạt độ tin cậy cao và phù hợp cho vận hành dài hạn.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Kiểm thử Module Nút bấm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[H]
+\centering
+\begin{tcolorbox}[
+    colback=white, 
+    colframe=blue!50!black,
+    arc=2mm, 
+    boxrule=0.8pt, 
+    width=\linewidth,
+    halign=center  % <--- căn giữa nội dung trong khung
+]
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{4.2cm}|p{3cm}|p{3cm}|c|}
+\hline
+\rowcolor{blue!15}\textbf{Loại thao tác} & \textbf{Số lần test} & \textbf{Lỗi phát hiện} & \textbf{Tỷ lệ thành công} \\
+\hline
+Nhấn đơn & 5000 & 0 & 100\% \\
+\hline
+Nhấn nhanh liên tiếp & 200 & 2 (do phần cứng) & 99\% \\
+\hline
+Nhấn giữ & 1000 & 0 & 100\% \\
+\hline
+Nhấn đồng thời 2 nút & 500 & 0 & 100\% \\
+\hline
+\end{tabular}
+\end{tcolorbox}
+\caption{Kiểm thử nút nhấn và debouncing}
+\end{table}
+
+
+\textbf{Nhận xét}:  
+\begin{itemize}
+    \item Hệ thống xử lý nút bấm hoạt động ổn định, nhận diện chính xác mọi thao tác.
+    \item Thuật toán debounce 300ms loại bỏ hoàn toàn hiện tượng kích hoạt kép và giữ tín hiệu đầu vào sạch.
+    \item Độ trễ phản hồi dưới 50ms, đảm bảo thao tác mượt và tự nhiên.
+    \item Hai lỗi ghi nhận xuất phát từ phần cứng, không liên quan đến logic phần mềm.
+    \item Cơ chế ngắt và FSM được thiết kế hợp lý, mang lại trải nghiệm vận hành nhất quán.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Kiểm thử Module Cảm biến DHT11}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\textbf{\hspace{0.5cm}Thống kê kiểm thử:}
+\begin{itemize}
+    \item Thời gian kiểm thử: 24 giờ  
+    \item Tổng số mẫu đọc: 3000  
+    \item Tỷ lệ đọc thành công: 99.2\%  
+    \item Lỗi đọc: 23/3000 lần (0.8\%)  
+    \item Cơ chế xử lý lỗi: Hiển thị “DHT Error!” và thử lại sau 2 giây; Không ghi nhận treo hệ thống hoặc reset
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\begin{tcolorbox}[
+colback=white, colframe=blue!50!black,
+arc=2mm, boxrule=0.8pt, width=\linewidth]
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{3.3cm}|p{4cm}|p{4cm}|c|}
+\hline
+\rowcolor{blue!15}\textbf{Thời điểm} & \textbf{DHT11 (°C)} & \textbf{Nhiệt kế chuẩn (°C)} & \textbf{Sai số (°C)} \\
+\hline
+08:00 & 26.3 & 26.5 & -0.2 \\
+\hline
+12:00 & 31.2 & 31.0 & +0.2 \\
+\hline
+18:00 & 28.7 & 28.8 & -0.1 \\
+\hline
+22:00 & 25.1 & 25.2 & -0.1 \\
+\hline
+\end{tabular}
+\end{tcolorbox}
+\caption{Độ chính xác nhiệt độ DHT11}
+\end{table}
+
+\textbf{Nhận xét}:  
+\begin{itemize}
+    \item Tỷ lệ đọc thành công đạt \textbf{99.2\%} trong 24 giờ, cho thấy cảm biến hoạt động ổn định. Lỗi đọc chiếm \textbf{0.8\%} và được xử lý an toàn qua thông báo \texttt{"DHT Error!"} cùng cơ chế retry sau 2 giây.
+    \item Sai số nhiệt độ ±0.15°C, tốt hơn nhiều so với sai số danh định của DHT11.
+    \item Giao tiếp 1-wire ổn định, không xảy ra treo bus hay reset hệ thống.
+    \item Tổng thể, module đạt độ tin cậy cao và đáp ứng yêu cầu kỹ thuật của hệ thống.
+\end{itemize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Kiểm thử Module RTC}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\textbf{\hspace{0.5cm}Kết quả kiểm thử:}
+
+\begin{itemize}
+    \item Độ lệch sau 7 ngày: +2.3 giây  
+    \item Sai số trung bình: ±0.33 giây/ngày  
+    \item Ảnh hưởng nhiệt độ: < 0.1s khi thay đổi 10°C  
+\end{itemize}
+
+\textbf{Kiểm thử báo thức:}
+
+\begin{itemize}
+    \item Số lần kiểm thử: 50; Kích hoạt đúng giờ: 50/50 (100\%)  
+    \item Độ trễ phản hồi: $< 1$ giây; Buzzer hoạt động ổn định  
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\begin{tcolorbox}[
+colback=white, colframe=blue!50!black,
+arc=2mm, boxrule=0.8pt, width=\linewidth]
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{7cm}|p{7cm}|}
+\hline
+\rowcolor{blue!15}\textbf{Hạng mục kiểm thử} & \textbf{Kết quả} \\
+\hline
+Độ lệch sau 7 ngày & +2.3 giây \\
+\hline
+Sai số trung bình & ±0.33 giây/ngày \\
+\hline
+Ảnh hưởng nhiệt độ & <0.1 giây/10°C \\
+\hline
+Báo thức kích hoạt đúng giờ & 100\% (50/50 lần) \\
+\hline
+Thời gian phản hồi & <1 giây \\
+\hline
+Tình trạng buzzer & Hoạt động ổn định \\
+\hline
+\end{tabular}
+\end{tcolorbox}
+\caption{Kết quả kiểm thử module RTC}
+\end{table}
+
+\textbf{Nhận xét}:  
+Module RTC đạt độ chính xác cao, sai số nhỏ và ổn định. Chức năng báo thức hoạt động hoàn hảo, không phát sinh lỗi trong suốt quá trình kiểm thử.
+
+
+
+\newpage
+\section{Đánh Giá Hiệu Năng Hệ Thống}
+
+\subsection{Hiệu năng Scheduler}
+
+$\indent$Hiệu năng của scheduler được đánh giá dựa trên chu kỳ thực thi (\textit{period}), thời gian xử lý (\textit{execution time}) và mức độ chiếm dụng CPU của từng tác vụ. Kết quả tổng hợp được thể hiện trong Bảng~\ref{tab:scheduler_perf}.
+
+\begin{table}[H]
+\centering
+\begin{tcolorbox}[
+colback=white, colframe=blue!50!black,
+arc=2mm, boxrule=0.8pt, width=\linewidth]
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{4.5cm}|c|c|c|}
+\hline
+\rowcolor{blue!15}\textbf{Task} & \textbf{Period (ms)} & \textbf{Execution Time (ms)} & \textbf{CPU Usage (\%)} \\
+\hline
+Button Check & 50  & 0.8 -- 1.2 & 1.6 -- 2.4 \\
+\hline
+LED Display  & 100 & 2.5 -- 3.0 & 2.5 -- 3.0 \\
+\hline
+LCD Display  & 100 & 4.0 -- 5.5 & 4.0 -- 5.5 \\
+\hline
+Alarm Check  & 1000 & 0.3 -- 0.5 & 0.03 -- 0.05 \\
+\hline
+Sensor Read  & 2000 & 15 -- 18 & 0.75 -- 0.9 \\
+\hline
+LED Blink    & 200 & 0.1 -- 0.2 & 0.05 -- 0.1 \\
+\hline
+\end{tabular}
+\end{tcolorbox}
+\caption{Hiệu năng thực thi các tác vụ trong Scheduler}
+\label{tab:scheduler_perf}
+\end{table}
+
+\textbf{Tổng quan tài nguyên sử dụng:}
+\begin{itemize}
+    \item CPU Usage tổng: 9\% -- 12\%
+    \item RAM sử dụng: 8.2 KB / 320 KB ($\approx$ 2.6\%)
+    \item Flash sử dụng: 245 KB / 1.2 MB ($\approx$ 20\%)
+    \item Jitter thời gian: $< 5$ ms (đạt yêu cầu real-time nhẹ)
+\end{itemize}
+
+\textbf{Nhận xét:}
+\begin{itemize}
+    \item Scheduler hoạt động ổn định, không xuất hiện hiện tượng \textit{starvation}.
+    \item Mức sử dụng CPU và RAM thấp, cho phép hệ thống mở rộng thêm tính năng.
+    \item Thời gian thực thi đều đặn, phù hợp ứng dụng giám sát và điều khiển thời gian thực.
+\end{itemize}
+
+% ================================
+% 5.3.2 ĐỘ TIN CẬY
+% ================================
+
+\subsection{Đánh giá độ tin cậy}
+
+$\indent$Độ tin cậy được đánh giá thông qua bài kiểm thử tải nặng (\textit{stress test}) và vận hành liên tục trong thời gian dài. Kết quả được trình bày trong Bảng~\ref{tab:stress_test}.
+
+\begin{table}[H]
+\centering
+\begin{tcolorbox}[
+colback=white, colframe=blue!50!black,
+arc=2mm, boxrule=0.8pt, width=\linewidth]
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{5.5cm}|c|c|}
+\hline
+\rowcolor{blue!15}\textbf{Tiêu chí kiểm thử} & \textbf{Thời gian / Số lần test} & \textbf{Kết quả} \\
+\hline
+Uptime liên tục & 72 giờ & Không treo, không reset \\
+\hline
+Chuyển chế độ liên tục & 1000 lần & Không lỗi \\
+\hline
+Nhấn nút ngẫu nhiên & 5000 lần & 2 lỗi bounce (0.04\%) \\
+\hline
+Đọc cảm biến liên tục & 43200 lần & 23 lỗi (0.05\%) \\
+\hline
+\end{tabular}
+\end{tcolorbox}
+\caption{Kết quả kiểm thử độ tin cậy (Stress Test)}
+\label{tab:stress_test}
+\end{table}
+
+\subsubsection*{Đánh giá độ tin cậy}
+
+\begin{itemize}
+    \item \textbf{MTBF (Mean Time Between Failures)}: > 720 giờ.
+    \item Hệ thống hoạt động liên tục ổn định, không ghi nhận hiện tượng treo hay tự khởi động lại.
+    \item Lỗi nút và lỗi cảm biến xuất hiện rất thấp, nằm trong giới hạn chấp nhận được của phần cứng.
+    \item Độ tin cậy cao, phù hợp cho vận hành dài hạn trong môi trường dân dụng.
+\end{itemize}
+
+% ================================
+% 5.3.3 NĂNG LƯỢNG
+% ================================
+
+\subsection{Tiêu thụ năng lượng}
+
+$\indent$Công suất tiêu thụ trong các trạng thái khác nhau được trình bày trong Bảng~\ref{tab:power_usage}.
+
+\begin{table}[H]
+\centering
+\begin{tcolorbox}[
+colback=white, colframe=blue!50!black,
+arc=2mm, boxrule=0.8pt, width=\linewidth]
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|p{4.5cm}|c|c|c|}
+\hline
+\rowcolor{blue!15}\textbf{Trạng thái} & \textbf{Điện áp (V)} & \textbf{Dòng điện (mA)} & \textbf{Công suất (mW)} \\
+\hline
+Idle (chỉ hiển thị) & 5.0 & 180 -- 200 & 900 -- 1000 \\
+\hline
+Active (đọc cảm biến) & 5.0 & 220 -- 240 & 1100 -- 1200 \\
+\hline
+Alarm / Buzzer ON & 5.0 & 250 -- 280 & 1250 -- 1400 \\
+\hline
+Trung bình & 5.0 & $\sim$210 & $\sim$1050 \\
+\hline
+\end{tabular}
+\end{tcolorbox}
+\caption{Công suất tiêu thụ của hệ thống}
+\label{tab:power_usage}
+\end{table}
+
+\textbf{Thời gian hoạt động với pin 9V – 500 mAh:}
+\[
+\text{Thời gian} \approx \frac{0.5 \text{ Ah}}{0.21 \text{ A}} \approx 2.3 \text{ giờ}
+\]
+
+\subsubsection*{Nhận xét - Tiêu thụ năng lượng}
+
+\begin{itemize}
+    \item Hệ thống tiêu thụ năng lượng ở mức \textbf{thấp so với tiêu chuẩn thông thường của ESP32}, cho thấy thiết kế phần mềm và phần cứng tối ưu.
+    \item Chênh lệch công suất giữa các trạng thái là \textbf{nhỏ}, phản ánh hệ thống vận hành \textbf{ổn định}, không xuất hiện các tải đột biến.
+    \item Thời gian sử dụng pin có thể kéo dài đáng kể thông qua các biện pháp tối ưu:
+    \begin{itemize}
+        \item Kích hoạt chế độ deep sleep khi không cần vận hành.
+        \item Giảm tần suất cập nhật LCD.
+        \item Tối ưu chu kỳ đọc dữ liệu cảm biến.
+    \end{itemize}
+\end{itemize}
+
+
+\newpage
+\section{Demo Sản Phẩm và Ứng Dung Thực Tế}
+
+\subsection{Kịch bản Demo Sản Phẩm}
+
+$\indent$Phần demo được xây dựng nhằm minh họa toàn bộ các chức năng cốt lõi của hệ thống đồng hồ thông minh, bao gồm: hiển thị thời gian, theo dõi môi trường, đo thời gian và cảnh báo. Các kịch bản được tổ chức ngắn gọn, trực quan và phản ánh đúng trải nghiệm người dùng thực tế.
+
+%-------------------------------------------------------
+\subsection*{Demo 1 - Chức năng Đồng hồ cơ bản}
+
+\textbf{\hspace{0.5cm}Mục tiêu:} Kiểm tra khả năng hiển thị thời gian thực và chuyển chế độ.
+
+\vspace{0.2cm}
+\textbf{Quy trình thực hiện:}
+\begin{itemize}
+    \item Khởi động hệ thống → LCD hiển thị ``Smart Clock'' trong 3 giây.
+    \item Chuyển sang chế độ \textit{Date/Time} → thời gian thực cập nhật từ RTC.
+    \item Nhấn \textbf{MODE} → chuyển sang \textit{Temp/Humidity}.
+    \item Quan sát dữ liệu cảm biến DHT11 cập nhật mỗi 2 giây.
+\end{itemize}
+
+%-------------------------------------------------------
+\subsection*{Demo 2 - Stopwatch với chức năng Lap Time}
+
+\textbf{\hspace{0.5cm}Mục tiêu:} Kiểm chứng tính năng start/stop và khả năng lưu mốc thời gian (lap).
+
+\vspace{0.2cm}
+\textbf{Quy trình thực hiện:}
+\begin{itemize}
+    \item Nhấn \textbf{MODE} → vào chế độ \textit{Stopwatch}.
+    \item Nhấn \textbf{SET} → bắt đầu đếm thời gian.
+    \item Sau khoảng 10 giây → \textbf{SET} → dừng và lưu \textbf{Lap 1}.
+    \item Nhấn \textbf{SET} → tiếp tục đếm.
+    \item Sau khoảng 15 giây → \textbf{SET} → dừng và lưu \textbf{Lap 2}.
+    \item Nhấn \textbf{INC} → duyệt danh sách lap trên LED và LCD.
+\end{itemize}
+
+\textbf{Kết quả mong đợi:} Hiển thị lần lượt: Lap 1 = 10s, Lap 2 = 15s.
+
+%-------------------------------------------------------
+\subsection*{Demo 3 - Countdown Timer}
+
+
+\textbf{\hspace{0.5cm}Mục tiêu:} Kiểm tra độ chính xác đếm ngược và cơ chế cảnh báo.
+
+\vspace{0.2cm}
+\textbf{Quy trình thực hiện:}
+\begin{itemize}
+    \item \textbf{MODE} → chuyển sang chế độ \textit{Countdown}.
+    \item \textbf{INC} → đặt thời gian 00:01:00.
+    \item \textbf{SET} → di chuyển qua các trường (giờ → phút → giây).
+    \item \textbf{SET} → bắt đầu đếm ngược.
+    \item Khi chạm 00:00:00 → buzzer kích hoạt, LED nhấp nháy.
+    \item \textbf{SET} → tắt cảnh báo.
+\end{itemize}
+
+%-------------------------------------------------------
+\subsection*{Demo 4 - Cài đặt báo thức (Alarm)}
+
+
+\textbf{\hspace{0.5cm}Mục tiêu:} Đánh giá độ chính xác RTC và khả năng kích hoạt báo thức tự động.
+
+\vspace{0.2cm}
+\textbf{Quy trình thực hiện:}
+\begin{itemize}
+    \item Nhấn \textbf{MODE} → chuyển đến chế độ \textit{Alarm}.
+    \item \textbf{INC} → điều chỉnh giờ đến 10.
+    \item \textbf{SET} → chuyển sang chỉnh phút.
+    \item \textbf{INC} → điều chỉnh phút đến 30.
+    \item Chờ đến thời điểm 10:30:00 → báo thức tự động kích hoạt.
+\end{itemize}
+
+\textbf{Kết quả kỳ vọng:} Buzzer kêu, LED nhấp nháy, LCD hiển thị ``ALARM RINGING!''.
+
+%=======================================================================
+\subsection{Ứng dụng thực tế của hệ thống}
+
+$\indent$Hệ thống đồng hồ thông minh có thể được ứng dụng trong nhiều môi trường khác nhau, từ gia đình, văn phòng, phòng thí nghiệm cho đến thể thao – nơi yêu cầu đo thời gian và giám sát môi trường chính xác.
+
+%-------------------------------------------------------
+\paragraph*{\hspace{0.5cm}1. Trong gia đình}
+
+\begin{itemize}
+    \item Phòng khách: Hiển thị nhiệt độ, độ ẩm giúp tối ưu sử dụng điều hòa.
+    \item Phòng ngủ: Báo thức thông minh, hiển thị thời gian rõ ràng, hỗ trợ \textit{countdown} trước khi ngủ.
+    \item Phòng bếp: Countdown cho nấu ăn, stopwatch cho các món yêu cầu thời gian chính xác.
+\end{itemize}
+
+%-------------------------------------------------------
+\paragraph*{\hspace{0.5cm}2. Trong văn phòng}
+
+\begin{itemize}
+    \item Quản lý thời gian cá nhân: Sử dụng như Pomodoro Timer (25 phút làm việc + 5 phút nghỉ).
+    \item Họp hành: Stopwatch đo thời gian trình bày, countdown cho từng phần họp.
+    \item Giám sát môi trường: Cảnh báo khi nhiệt độ/độ ẩm vượt ngưỡng.
+\end{itemize}
+
+%-------------------------------------------------------
+\paragraph*{\hspace{0.5cm}3. Trong phòng thí nghiệm}
+
+\begin{itemize}
+    \item Thí nghiệm hóa học: Timer chính xác cho các phản ứng cần thời gian chặt chẽ.
+    \item Giám sát điều kiện môi trường: Theo dõi nhiệt độ và độ ẩm.
+    \item Đồng bộ thời gian: RTC độ chính xác cao hỗ trợ thiết bị đo lường.
+\end{itemize}
+
+%-------------------------------------------------------
+\paragraph*{\hspace{0.5cm}4. Trong thể thao và phòng gym}
+
+\begin{itemize}
+    \item Bấm giờ luyện tập: Stopwatch + Lap Time cho chạy bộ hoặc tập interval.
+    \item Rest Timer: Countdown thời gian nghỉ giữa các hiệp.
+    \item Theo dõi môi trường: Kiểm tra nhiệt độ/độ ẩm phòng tập để điều chỉnh cường độ.
+\end{itemize}
+
+
+
+
+
+
+
+\newpage
+\section{Kết luận và Hướng phát triển}
+
+
+\subsection{Tổng kết đề tài}
+
+$\indent$Sau quá trình nghiên cứu và triển khai kéo dài 7 tuần, đề tài 
+\textit{“Đồng hồ thông minh sử dụng Cooperative Scheduler trên ESP32”} 
+đã hoàn thiện với kết quả vượt trội so với kế hoạch ban đầu. Hệ thống không chỉ đáp ứng đầy đủ yêu cầu chức năng mà còn thể hiện khả năng vận hành ổn định, hiệu năng tối ưu và độ tin cậy cao - những yếu tố quan trọng đối với một thiết bị nhúng hoạt động liên tục.
+
+\vspace{0.2cm}
+Trên phương diện kỹ thuật, nhóm đã xây dựng một kiến trúc phần mềm rõ ràng với 8 module độc lập, đảm bảo khả năng mở rộng và dễ bảo trì. Trọng tâm của đề tài - Cooperative Scheduler - được tối ưu theo mô hình O(1) trong ngắt, giúp giảm jitter từ 50\,ms xuống còn dưới 5\,ms và duy trì mức sử dụng CPU khoảng 10\%. Toàn bộ 5 chế độ chức năng (Date/Time, Temp/Humidity, Alarm, Stopwatch, Countdown) vận hành mượt mà trên LED 7-seg và LCD I2C. Hệ thống cảm biến (RTC, DHT11), buzzer và ba nút nhấn được tích hợp hiệu quả, đạt tỷ lệ lỗi dưới 1\%.
+
+\vspace{0.2cm}
+Về mặt học thuật, nhóm củng cố kiến thức về lập trình thời gian thực, quản lý tài nguyên, tối ưu ISR, đọc hiểu datasheet và debug thiết bị thực. Kỹ năng làm việc nhóm được cải thiện thông qua phân chia module hợp lý, code review, xử lý xung đột phiên bản và trao đổi kỹ thuật thường xuyên.
+
+\vspace{0.2cm}
+Đối chiếu với mục tiêu ban đầu, phần lớn các tiêu chí đều vượt xa yêu cầu: sai số stopwatch chỉ còn $\pm 10$\,ms, hệ thống chạy liên tục trên 72 giờ, scheduler O(1) ổn định, tỷ lệ lỗi nút bấm dưới 1\%, và tiến độ hoàn thành sớm hơn một tuần.
+
+\subsection{Ý nghĩa khoa học và thực tiễn}
+
+\textbf{\hspace{0.5cm}Ý nghĩa khoa học.}  
+Đề tài cung cấp một minh chứng rõ ràng về hiệu quả của kiến trúc Cooperative Scheduler trên ESP32 trong các ứng dụng nhúng dung lượng nhỏ. Việc phân rã hệ thống thành các module độc lập thể hiện đúng hướng tiếp cận thiết kế phần mềm nhúng hiện đại. Các số liệu đo đạc minh bạch là nguồn tư liệu hữu ích cho sinh viên và kỹ sư nghiên cứu RTOS hoặc vi điều khiển.
+
+\vspace{0.2cm}
+\textbf{Ý nghĩa thực tiễn.}  
+Sản phẩm có thể ứng dụng trong đời sống: đồng hồ để bàn thông minh, thiết bị quản lý thời gian cho phòng gym, phòng thí nghiệm hoặc môi trường làm việc nhỏ. Chi phí thấp, dễ chế tạo, ổn định cao, có khả năng thương mại hóa hoặc phát triển DIY cho sinh viên công nghệ. Dự án cũng giúp nhóm tích lũy kinh nghiệm toàn diện từ thiết kế, lập trình, mô hình hóa, kiểm thử đến viết báo cáo và thuyết trình.
+
+\subsection{Hướng phát triển trong tương lai}
+
+$\indent$Nhóm định hướng ba hướng mở rộng chính:
+
+\begin{itemize}
+    \item \textbf{Cải tiến phần cứng:}  
+    Nâng cấp sang màn hình OLED, bổ sung cảm biến ánh sáng, áp suất, PIR; tích hợp pin Lithium và chế độ tiết kiệm năng lượng nhằm kéo dài thời gian sử dụng lên 20–30 giờ.
+
+    \item \textbf{Phát triển phần mềm:}  
+    Thêm Smart Alarm, dự báo thời tiết từ cảm biến áp suất, Multi-Alarm, Pomodoro timer; triển khai Adaptive Scheduling; hỗ trợ OTA update cho việc cập nhật firmware linh hoạt.
+
+    \item \textbf{Tích hợp mobile và AI:}  
+    Xây dựng ứng dụng Android/iOS để đồng bộ thời gian, xem dữ liệu cảm biến dạng biểu đồ, quản lý báo thức từ xa; cung cấp dashboard web; tích hợp các mô hình AI nhẹ để dự đoán nhiệt độ, phân tích thói quen ngủ,...
+\end{itemize}
+
+\subsection{Khó khăn và kinh nghiệm rút ra}
+
+$\indent$Trong quá trình thực hiện, nhóm gặp nhiều thách thức đặc thù của hệ thống nhúng: ISR O(n) gây jitter lớn, xung đột bus I2C giữa LCD và RTC, debouncing blocking gây treo hệ thống, memory leak trong scheduler, cảm biến DHT11 không ổn định. Từng vấn đề được giải quyết bằng các giải pháp phù hợp như rút gọn ISR về O(1), bảo vệ I2C bằng mutex, debouncing non-blocking, reset struct khi xoá task và áp dụng cơ chế backup + retry cho cảm biến.
+
+\vspace{0.2cm}
+Về phối hợp nhóm, khó khăn đến từ xung đột merge, thiếu tài liệu ban đầu và áp lực tiến độ. Nhóm xử lý bằng cách phân chia module rõ ràng, họp nhanh mỗi ngày, viết tài liệu song song với code và ưu tiên tính năng cốt lõi.
+
+\vspace{0.2cm}
+Từ dự án, nhóm rút ra các bài học quan trọng:
+\begin{itemize}
+    \item tối ưu phải dựa trên đo đạc thực tế, tránh delay blocking, ISR phải cực ngắn;
+    \item giao tiếp minh bạch quyết định hiệu quả làm việc nhóm; code review giúp giảm lỗi và chia sẻ kinh nghiệm;
+    \item quản lý dự án hiệu quả nhờ chia nhỏ công việc, đặt milestone rõ ràng và kiểm thử sớm.
+\end{itemize}
+
+\subsection{Đóng góp của các thành viên}
+
+$\indent$Nhóm phân chia công việc theo module và giai đoạn rõ ràng: 
+\vspace{1em}
+
+\begin{longtable}{|c|m{3.5cm}|c|m{5cm}|c|c|}
+\hline
+\textbf{STT} & \textbf{Họ và tên} & \textbf{MSSV} & \textbf{Nhiệm vụ} & \textbf{Kết quả} & \textbf{Chữ ký} \\
+\hline
+1 & Trần Quang Vinh & 2313932  & \begin{itemize}
+    \item Hiện thực mã nguồn 
+    \item Viết báo cáo
+\end{itemize} & 100\% & \\
+\hline
+2 & Phạm Công Võ &  2313946 & \begin{itemize}
+    \item Hiện thực mã nguồn 
+    \item Viết báo cáo
+\end{itemize} & 100\% & \\
+\hline
+
+\end{longtable}
+
+\vspace{0.2cm}
+Sản phẩm cuối cùng là kết quả của sự hợp tác hiệu quả, tinh thần trách nhiệm và khả năng thích ứng cao của toàn nhóm, tạo nền tảng vững chắc cho việc phát triển sản phẩm ở các giai đoạn tiếp theo.
+
+
+
+

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ đồ Phần Cứng ESP32</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: white;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .diagram-wrapper {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        .schematic {
+            display: grid;
+            grid-template-columns: 350px 150px 350px;
+            gap: 0;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Left side - Inputs */
+        .left-devices {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            padding-right: 20px;
+        }
+
+        /* Center - ESP32 */
+        .esp32-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .esp32-chip {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border: 4px solid #2c3e50;
+            border-radius: 15px;
+            width: 140px;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            text-align: center;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .chip-title {
+            font-size: 18px;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .chip-subtitle {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        /* Right side - Outputs */
+        .right-devices {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            padding-left: 20px;
+        }
+
+        /* Device boxes */
+        .device {
+            background: #ecf0f1;
+            border: 3px solid #34495e;
+            border-radius: 10px;
+            padding: 15px 20px;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .device-name {
+            font-weight: bold;
+            font-size: 15px;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .device-detail {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        .pin-label {
+            position: absolute;
+            background: #e74c3c;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: bold;
+            top: -12px;
+        }
+
+        .left-devices .pin-label {
+            right: -15px;
+        }
+
+        .right-devices .pin-label {
+            left: -15px;
+        }
+
+        /* Connection lines */
+        .connection-line {
+            position: absolute;
+            height: 3px;
+            background: #34495e;
+            z-index: -1;
+        }
+
+        .left-devices .device::after {
+            content: '';
+            position: absolute;
+            right: -23px;
+            top: 50%;
+            width: 20px;
+            height: 3px;
+            background: #e74c3c;
+            transform: translateY(-50%);
+        }
+
+        .right-devices .device::after {
+            content: '';
+            position: absolute;
+            left: -23px;
+            top: 50%;
+            width: 20px;
+            height: 3px;
+            background: #27ae60;
+            transform: translateY(-50%);
+        }
+
+        /* Color coding */
+        .device.sensor {
+            border-color: #e67e22;
+            background: #fef5e7;
+        }
+
+        .device.input {
+            border-color: #9b59b6;
+            background: #f4ecf7;
+        }
+
+        .device.i2c {
+            border-color: #16a085;
+            background: #e8f8f5;
+        }
+
+        .device.output {
+            border-color: #27ae60;
+            background: #eafaf1;
+        }
+
+        .device.display {
+            border-color: #2980b9;
+            background: #ebf5fb;
+        }
+
+        /* Power section */
+        .power-section {
+            margin-top: 40px;
+            text-align: center;
+            padding: 20px;
+            background: #fff9e6;
+            border: 3px solid #f39c12;
+            border-radius: 10px;
+        }
+
+        .power-title {
+            font-weight: bold;
+            font-size: 16px;
+            color: #f39c12;
+            margin-bottom: 15px;
+        }
+
+        .power-connections {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .power-item {
+            background: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid #f39c12;
+            font-weight: bold;
+        }
+
+        /* Legend */
+        .legend {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #2c3e50;
+        }
+
+        .legend-color {
+            width: 25px;
+            height: 25px;
+            border-radius: 5px;
+            border: 2px solid #2c3e50;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 20px;
+            }
+            .diagram-wrapper {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="diagram-wrapper">
+        <div class="title">SƠ ĐỒ KẾT NỐI PHẦN CỨNG HỆ THỐNG ESP32</div>
+        
+        <div class="schematic">
+            <!-- Left side - Input devices -->
+            <div class="left-devices">
+                <div class="device sensor">
+                    <span class="pin-label">GPIO 27</span>
+                    <div class="device-name">DHT11</div>
+                    <div class="device-detail">Cảm biến nhiệt độ & độ ẩm</div>
+                </div>
+
+                <div class="device input">
+                    <span class="pin-label">GPIO 16</span>
+                    <div class="device-name">Nút MODE</div>
+                    <div class="device-detail">Chuyển chế độ (Pull-up)</div>
+                </div>
+
+                <div class="device input">
+                    <span class="pin-label">GPIO 17</span>
+                    <div class="device-name">Nút SET</div>
+                    <div class="device-detail">Cài đặt (Pull-up)</div>
+                </div>
+
+                <div class="device input">
+                    <span class="pin-label">GPIO 5</span>
+                    <div class="device-name">Nút INC</div>
+                    <div class="device-detail">Tăng giá trị (Pull-up)</div>
+                </div>
+
+                <div class="device i2c">
+                    <span class="pin-label">GPIO 21/22</span>
+                    <div class="device-name">RTC DS3231</div>
+                    <div class="device-detail">I2C: 0x68 (SDA/SCL)</div>
+                </div>
+            </div>
+
+            <!-- Center - ESP32 -->
+            <div class="esp32-center">
+                <div class="esp32-chip">
+                    <div class="chip-title">ESP32</div>
+                    <div class="chip-title">WROOM-32</div>
+                    <div style="margin: 20px 0; font-size: 30px;">⚡</div>
+                    <div class="chip-subtitle">WiFi + Bluetooth</div>
+                    <div class="chip-subtitle">Dual-Core</div>
+                </div>
+            </div>
+
+            <!-- Right side - Output devices -->
+            <div class="right-devices">
+                <div class="device display">
+                    <span class="pin-label">GPIO 13/14/12</span>
+                    <div class="device-name">MAX7219</div>
+                    <div class="device-detail">Ma trận LED 8x8 (SPI)</div>
+                </div>
+
+                <div class="device i2c">
+                    <span class="pin-label">GPIO 21/22</span>
+                    <div class="device-name">LCD 16x2 I2C</div>
+                    <div class="device-detail">I2C: 0x27 (SDA/SCL)</div>
+                </div>
+
+                <div class="device output">
+                    <span class="pin-label">GPIO 32</span>
+                    <div class="device-name">Buzzer</div>
+                    <div class="device-detail">Active Buzzer (Còi báo)</div>
+                </div>
+
+                <div class="device output">
+                    <span class="pin-label">GPIO 33</span>
+                    <div class="device-name">LED Indicator</div>
+                    <div class="device-detail">LED báo hiệu</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Power section -->
+        <div class="power-section">
+            <div class="power-title">⚡ NGUỒN ĐIỆN</div>
+            <div class="power-connections">
+                <div class="power-item">3V3 → VCC (Tất cả module)</div>
+                <div class="power-item">GND → GND (Tất cả module)</div>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fef5e7; border-color: #e67e22;"></div>
+                <span>Cảm biến</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #f4ecf7; border-color: #9b59b6;"></div>
+                <span>Nút nhấn</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e8f8f5; border-color: #16a085;"></div>
+                <span>I2C</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ebf5fb; border-color: #2980b9;"></div>
+                <span>Hiển thị</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #eafaf1; border-color: #27ae60;"></div>
+                <span>Đầu ra</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

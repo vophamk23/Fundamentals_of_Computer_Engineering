@@ -1,0 +1,6 @@
+timer.c:17:6:timer0_set	16	static
+timer.c:21:5:timer0_getFlag	4	static
+timer.c:25:6:timer1_set	16	static
+timer.c:29:5:timer1_getFlag	4	static
+timer.c:33:6:decrementSoftwareTimer	4	static
+timer.c:45:6:HAL_TIM_PeriodElapsedCallback	16	static

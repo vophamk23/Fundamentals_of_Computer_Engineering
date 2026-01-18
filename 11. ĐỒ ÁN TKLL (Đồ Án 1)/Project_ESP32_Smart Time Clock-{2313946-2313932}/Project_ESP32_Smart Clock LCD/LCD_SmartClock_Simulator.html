@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LCD 16x2 Smart Clock - Mô Phỏng Arduino</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+            padding: 1.5rem;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            animation: fadeIn 0.6s ease;
+        }
+
+        .header h1 {
+            font-size: 2.8rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            animation: slideUp 0.6s ease;
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .lcd-container {
+            background: linear-gradient(145deg, #1f2937, #111827);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.6),
+                inset 0 2px 8px rgba(255, 255, 255, 0.05);
+            border: 3px solid #374151;
+            position: relative;
+        }
+
+        .lcd-container::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            pointer-events: none;
+        }
+
+        .lcd-screen {
+            background: linear-gradient(180deg, #7ee787 0%, #86efac 100%);
+            padding: 1.8rem 1.5rem;
+            border-radius: 10px;
+            font-family: 'Courier New', 'Consolas', monospace;
+            color: #064e3b;
+            font-weight: bold;
+            font-size: 1.4rem;
+            line-height: 2;
+            letter-spacing: 0.05em;
+            box-shadow: 
+                inset 0 2px 8px rgba(0, 0, 0, 0.2),
+                0 4px 12px rgba(134, 239, 172, 0.3);
+            position: relative;
+            min-height: 120px;
+        }
+
+        .lcd-screen::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0.1) 0%,
+                transparent 50%,
+                rgba(0, 0, 0, 0.05) 100%
+            );
+            pointer-events: none;
+            border-radius: 10px;
+        }
+
+        .lcd-line {
+            position: relative;
+            z-index: 1;
+        }
+
+        .controls {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.875rem 1.75rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-green {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            color: white;
+        }
+
+        .btn-green:hover {
+            background: linear-gradient(135deg, #15803d, #16a34a);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-red {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            color: white;
+        }
+
+        .btn-red:hover {
+            background: linear-gradient(135deg, #b91c1c, #dc2626);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-blue {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: white;
+        }
+
+        .btn-blue:hover {
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .modes-grid {
+            display: grid;
+            gap: 0.75rem;
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        @media (max-width: 640px) {
+            .modes-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .mode-btn {
+            background: rgba(51, 65, 85, 0.6);
+            color: #cbd5e1;
+            padding: 1rem 1.25rem;
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .mode-btn:hover {
+            background: rgba(71, 85, 105, 0.8);
+            transform: translateX(4px);
+            border-color: rgba(100, 116, 139, 0.8);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: white;
+            border-color: #3b82f6;
+            transform: scale(1.02);
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.5);
+        }
+
+        .mode-btn i {
+            width: 20px;
+            height: 20px;
+        }
+
+        .info-box {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 16px;
+            margin-top: 2rem;
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            animation: slideUp 0.8s ease;
+        }
+
+        .info-box h3 {
+            font-size: 1.4rem;
+            margin-bottom: 1.25rem;
+            color: #60a5fa;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-content {
+            color: #cbd5e1;
+            line-height: 1.8;
+        }
+
+        .info-item {
+            margin-bottom: 0.875rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .info-item::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: #60a5fa;
+            font-weight: bold;
+        }
+
+        .info-item strong {
+            color: #e2e8f0;
+            font-weight: 700;
+        }
+
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1.25rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.running {
+            background: #22c55e;
+            box-shadow: 0 0 10px #22c55e;
+        }
+
+        .status-indicator.stopped {
+            background: #ef4444;
+            box-shadow: 0 0 10px #ef4444;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖥️ LCD 16x2 Smart Clock Simulator</h1>
+            <p>Arduino Project - Real-time Display Mockup</p>
+        </div>
+
+        <div class="main-grid">
+            <div class="card">
+                <h2>
+                    <i data-lucide="monitor"></i>
+                    Màn Hình LCD
+                    <span class="badge">16x2 I2C</span>
+                </h2>
+                <div class="lcd-container">
+                    <div class="lcd-screen">
+                        <div class="lcd-line" id="line1">Time: 00:00:00</div>
+                        <div class="lcd-line" id="line2">Date: 01/01/2024</div>
+                    </div>
+                </div>
+                <div class="controls" id="controls"></div>
+            </div>
+
+            <div class="card">
+                <h2>
+                    <i data-lucide="layout-grid"></i>
+                    Chế Độ Hiển Thị
+                </h2>
+                <div class="modes-grid" id="modesGrid"></div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h3>📌 Giải Thích Các Chế Độ</h3>
+            <div class="info-content">
+                <div class="info-item"><strong>Khởi Động:</strong> Màn hình hiển thị khi Arduino khởi động</div>
+                <div class="info-item"><strong>Ngày Giờ:</strong> Hiển thị thời gian thực từ RTC DS3231</div>
+                <div class="info-item"><strong>Nhiệt Độ/Độ Ẩm:</strong> Đọc dữ liệu từ cảm biến DHT11/DHT22</div>
+                <div class="info-item"><strong>Báo Thức (Chỉnh):</strong> Cài đặt giờ báo thức (giờ/phút nháy khi chỉnh)</div>
+                <div class="info-item"><strong>Báo Thức (Kêu):</strong> Thông báo khi đến giờ báo thức</div>
+                <div class="info-item"><strong>Bấm Giờ:</strong> Stopwatch với độ chính xác 0.01 giây + số lap</div>
+                <div class="info-item"><strong>Đếm Ngược:</strong> Timer đếm ngược từ thời gian đã cài đặt</div>
+                <div class="info-item"><strong>Đếm Ngược (Hết):</strong> Thông báo khi hết thời gian</div>
+                <div class="info-item"><strong>Xem Lap:</strong> Hiển thị thời gian của mỗi lap đã lưu</div>
+                <div class="info-item"><strong>Lỗi Cảm Biến:</strong> Thông báo khi không đọc được DHT sensor</div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h3>⚙️ Thông Số Kỹ Thuật</h3>
+            <div class="specs-grid">
+                <div class="info-item"><strong>LCD:</strong> 16x2 ký tự I2C (địa chỉ 0x27)</div>
+                <div class="info-item"><strong>RTC:</strong> DS3231 High Precision</div>
+                <div class="info-item"><strong>Cảm biến:</strong> DHT11/DHT22 Temperature & Humidity</div>
+                <div class="info-item"><strong>Độ phân giải:</strong> 0.01 giây (centiseconds)</div>
+                <div class="info-item"><strong>Font:</strong> Monospace (Courier New)</div>
+                <div class="info-item"><strong>Hiệu ứng:</strong> Nháy 500ms khi chỉnh sửa</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'datetime';
+        let currentTime = new Date();
+        let stopwatchTime = 0;
+        let countdownTime = 180000;
+        let isStopwatchRunning = false;
+        let isCountdownRunning = false;
+        let blink = true;
+        let alarmEditingHour = true;
+        let stopwatchInterval, countdownInterval;
+
+        const modes = [
+            { id: 'init', name: 'Khởi Động', icon: 'power' },
+            { id: 'datetime', name: 'Ngày Giờ', icon: 'clock' },
+            { id: 'temp', name: 'Nhiệt Độ/Độ Ẩm', icon: 'thermometer' },
+            { id: 'alarm', name: 'Báo Thức (Chỉnh)', icon: 'bell' },
+            { id: 'alarm_ring', name: 'Báo Thức (Kêu)', icon: 'bell-ring' },
+            { id: 'stopwatch', name: 'Bấm Giờ', icon: 'timer' },
+            { id: 'countdown', name: 'Đếm Ngược', icon: 'hourglass' },
+            { id: 'countdown_done', name: 'Đếm Ngược (Hết)', icon: 'alarm-clock' },
+            { id: 'lap', name: 'Xem Lap', icon: 'list' },
+            { id: 'error', name: 'Lỗi Cảm Biến', icon: 'alert-circle' }
+        ];
+
+        function pad(num, size = 2) {
+            return String(num).padStart(size, '0');
+        }
+
+        function formatTime(ms) {
+            const hours = Math.floor(ms / 3600000) % 100;
+            const minutes = Math.floor(ms / 60000) % 60;
+            const seconds = Math.floor(ms / 1000) % 60;
+            const centiseconds = Math.floor(ms / 10) % 100;
+            return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}.${pad(centiseconds)}`;
+        }
+
+        function updateDisplay() {
+            const line1 = document.getElementById('line1');
+            const line2 = document.getElementById('line2');
+
+            switch(currentMode) {
+                case 'datetime':
+                    line1.textContent = `Time: ${pad(currentTime.getHours())}:${pad(currentTime.getMinutes())}:${pad(currentTime.getSeconds())}`;
+                    line2.textContent = `Date: ${pad(currentTime.getDate())}/${pad(currentTime.getMonth() + 1)}/${currentTime.getFullYear()}`;
+                    break;
+                
+                case 'temp':
+                    line1.textContent = 'Temp: 25.3°C';
+                    line2.textContent = 'Humi: 67.2%';
+                    break;
+                
+                case 'alarm':
+                    const hourDisplay = (alarmEditingHour && !blink) ? '  ' : '06';
+                    const minDisplay = (!alarmEditingHour && !blink) ? '  ' : '30';
+                    line1.textContent = `Now: ${pad(currentTime.getHours())}:${pad(currentTime.getMinutes())}:${pad(currentTime.getSeconds())} `;
+                    line2.textContent = `Alarm: ${hourDisplay}:${minDisplay}    `;
+                    break;
+                
+                case 'stopwatch':
+                    line1.textContent = `Stopwatch ${isStopwatchRunning ? 'RUN ' : 'STOP'}`;
+                    line2.textContent = `${formatTime(stopwatchTime)} L3`;
+                    break;
+                
+                case 'countdown':
+                    line1.textContent = `Countdown ${isCountdownRunning ? 'RUN   ' : 'STOP  '}`;
+                    line2.textContent = `${formatTime(countdownTime)}  `;
+                    break;
+                
+                case 'lap':
+                    line1.textContent = 'Lap 3 Time:';
+                    line2.textContent = '00:01:23.45';
+                    break;
+                
+                case 'init':
+                    line1.textContent = 'Smart Clock v1.0';
+                    line2.textContent = 'Initializing...';
+                    break;
+                
+                case 'error':
+                    line1.textContent = 'DHT Error!';
+                    line2.textContent = 'Check Sensor';
+                    break;
+                
+                case 'alarm_ring':
+                    line1.textContent = `Now: ${pad(currentTime.getHours())}:${pad(currentTime.getMinutes())}:${pad(currentTime.getSeconds())} `;
+                    line2.textContent = '🔔 ALARM RING! 🔔';
+                    break;
+                
+                case 'countdown_done':
+                    line1.textContent = "⏰ TIME'S UP! ⏰";
+                    line2.textContent = '00:00:00.00';
+                    break;
+            }
+        }
+
+        function updateControls() {
+            const controls = document.getElementById('controls');
+            controls.innerHTML = '';
+
+            if (currentMode === 'stopwatch') {
+                const statusClass = isStopwatchRunning ? 'running' : 'stopped';
+                controls.innerHTML = `
+                    <button class="btn btn-green" onclick="toggleStopwatch()">
+                        ${isStopwatchRunning ? '⏸️ Pause' : '▶️ Start'}
+                    </button>
+                    <button class="btn btn-red" onclick="resetStopwatch()">🔄 Reset</button>
+                    <span class="status-indicator ${statusClass}"></span>
+                `;
+            } else if (currentMode === 'countdown') {
+                const statusClass = isCountdownRunning ? 'running' : 'stopped';
+                controls.innerHTML = `
+                    <button class="btn btn-green" onclick="toggleCountdown()">
+                        ${isCountdownRunning ? '⏸️ Pause' : '▶️ Start'}
+                    </button>
+                    <button class="btn btn-red" onclick="resetCountdown()">🔄 Reset</button>
+                    <span class="status-indicator ${statusClass}"></span>
+                `;
+            } else if (currentMode === 'alarm') {
+                controls.innerHTML = `
+                    <button class="btn btn-blue" onclick="toggleAlarmEdit()">
+                        ⚙️ Chỉnh ${alarmEditingHour ? 'Giờ' : 'Phút'}
+                    </button>
+                `;
+            }
+        }
+
+        function setMode(modeId) {
+            currentMode = modeId;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === modeId);
+            });
+            updateDisplay();
+            updateControls();
+        }
+
+        function toggleStopwatch() {
+            isStopwatchRunning = !isStopwatchRunning;
+            if (isStopwatchRunning) {
+                stopwatchInterval = setInterval(() => {
+                    stopwatchTime += 10;
+                    updateDisplay();
+                }, 10);
+            } else {
+                clearInterval(stopwatchInterval);
+            }
+            updateControls();
+        }
+
+        function resetStopwatch() {
+            stopwatchTime = 0;
+            isStopwatchRunning = false;
+            clearInterval(stopwatchInterval);
+            updateDisplay();
+            updateControls();
+        }
+
+        function toggleCountdown() {
+            isCountdownRunning = !isCountdownRunning;
+            if (isCountdownRunning) {
+                countdownInterval = setInterval(() => {
+                    countdownTime = Math.max(0, countdownTime - 10);
+                    if (countdownTime === 0) {
+                        clearInterval(countdownInterval);
+                        isCountdownRunning = false;
+                        setMode('countdown_done');
+                    }
+                    updateDisplay();
+                }, 10);
+            } else {
+                clearInterval(countdownInterval);
+            }
+            updateControls();
+        }
+
+        function resetCountdown() {
+            countdownTime = 180000;
+            isCountdownRunning = false;
+            clearInterval(countdownInterval);
+            if (currentMode === 'countdown_done') {
+                setMode('countdown');
+            }
+            updateDisplay();
+            updateControls();
+        }
+
+        function toggleAlarmEdit() {
+            alarmEditingHour = !alarmEditingHour;
+            updateControls();
+        }
+
+        // Initialize modes
+        const modesGrid = document.getElementById('modesGrid');
+        modes.forEach(mode => {
+            const btn = document.createElement('button');
+            btn.className = 'mode-btn';
+            btn.dataset.mode = mode.id;
+            btn.onclick = () => setMode(mode.id);
+            btn.innerHTML = `<i data-lucide="${mode.icon}"></i><span>${mode.name}</span>`;
+            modesGrid.appendChild(btn);
+        });
+
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Update time every second
+        setInterval(() => {
+            currentTime = new Date();
+            if (currentMode === 'datetime' || currentMode === 'alarm' || currentMode === 'alarm_ring') {
+                updateDisplay();
+            }
+        }, 1000);
+
+        // Blink effect for alarm editing
+        setInterval(() => {
+            blink = !blink;
+            if (currentMode === 'alarm') {
+                updateDisplay();
+            }
+        }, 500);
+
+        // Initial display
+        setMode('datetime');
+    </script>
+</body>
+</html>

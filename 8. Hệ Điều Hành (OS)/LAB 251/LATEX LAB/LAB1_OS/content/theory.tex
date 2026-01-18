@@ -1,0 +1,1641 @@
+\section{Cơ sở lý thuyết}
+
+\subsection{Giới thiệu chung về Linux và giao diện dòng lệnh (CLI)}
+$\indent$Linux là một hệ điều hành mã nguồn mở được phát triển dựa trên nhân (kernel) Linux. Nó được sử dụng rộng rãi trong các máy chủ, hệ thống nhúng, thiết bị IoT và cả trong lĩnh vực học thuật – nghiên cứu.  
+Một trong những điểm mạnh nổi bật của Linux là khả năng làm việc hiệu quả thông qua \textbf{giao diện dòng lệnh (Command Line Interface – CLI)}.
+
+CLI cho phép người dùng nhập lệnh trực tiếp để ra lệnh cho hệ thống thực thi, thay vì sử dụng giao diện đồ họa (GUI).  
+Mặc dù giao diện đồ họa trực quan và thân thiện, nhưng CLI lại mạnh mẽ, tiết kiệm tài nguyên, dễ tự động hóa và tương thích cao với các công cụ lập trình.
+
+Khi làm việc trên Linux, người dùng thường tương tác thông qua \textbf{Terminal} – chương trình cho phép nhập và thực thi các lệnh.  
+Một số cách mở Terminal trong Ubuntu:
+\begin{itemize}
+  \item Nhấn tổ hợp phím \texttt{Ctrl + Alt + T}
+  \item Hoặc vào menu: \texttt{Applications → Terminal}
+\end{itemize}
+
+Ví dụ giao diện dòng lệnh:
+
+
+\begin{tcolorbox}[myterminal]
+student@ubuntu:\$ 
+\end{tcolorbox}
+
+\subsection{Khái niệm về Shell trong Linux}
+$\indent$\textbf{Shell} là chương trình trung gian giữa người dùng và hệ điều hành, có nhiệm vụ nhận lệnh, phân tích cú pháp và gửi yêu cầu đến kernel để thực thi.  
+Shell vừa là \textbf{trình thông dịch lệnh (command interpreter)} vừa là \textbf{ngôn ngữ lập trình kịch bản (scripting language)} cho phép tự động hóa các công việc.
+
+Một số loại Shell phổ biến:
+
+\begin{center}
+\begin{tabular}{|l|p{8cm}|}
+\hline
+\textbf{Tên Shell} & \textbf{Đặc điểm nổi bật} \\
+\hline
+Bash (Bourne Again Shell) & Phổ biến nhất, hỗ trợ scripting mạnh, có lịch sử lệnh, tự động hoàn thành. \\
+\hline
+Zsh (Z Shell) & Tùy biến cao, hỗ trợ plugin, giao diện đẹp hơn Bash. \\
+\hline
+Fish (Friendly Interactive Shell) & Dễ dùng, gợi ý lệnh thông minh, thân thiện cho người mới học. \\
+\hline
+Tcsh / Csh & Cú pháp tương tự ngôn ngữ C, thường dùng trong môi trường lập trình đặc thù. \\
+\hline
+Ksh (Korn Shell) & Hiệu suất cao, hỗ trợ lập trình script nâng cao. \\
+\hline
+\end{tabular}
+\end{center}
+
+Trong hầu hết các hệ thống hiện nay, \textbf{Bash} là Shell mặc định, do đó các bài thực hành trong môn học này tập trung vào Bash.
+
+
+\subsection{Cấu trúc và hệ thống thư mục trong Linux}
+$\indent$Linux sử dụng \textbf{hệ thống tệp phân cấp (hierarchical file system)} với thư mục gốc là ``/''.  
+
+\begin{center}
+\begin{tabular}{|l|p{8cm}|}
+\hline
+\textbf{Thư mục} & \textbf{Chức năng} \\
+\hline
+/home & Lưu dữ liệu người dùng. \\
+\hline
+/bin, /usr/bin & Chứa các chương trình, lệnh hệ thống. \\
+\hline
+/etc & Chứa các tệp cấu hình hệ thống. \\
+\hline
+/var & Lưu log và dữ liệu tạm thời. \\
+\hline
+/root & Thư mục riêng của người quản trị (root). \\
+\hline
+\end{tabular}
+\end{center}
+
+
+\subsection{Một số lệnh cơ bản trong Linux}
+$\indent$Các lệnh trong Linux được sử dụng thông qua giao diện dòng lệnh (CLI). \\
+
+Bảng dưới đây liệt kê một số lệnh cơ bản thường dùng cùng với chức năng và mô tả chi tiết:
+\begin{center}
+\begin{tabular}{|p{4cm}|p{4cm}|p{7cm}|}
+\hline
+\textbf{Chức năng} & \textbf{Lệnh} & \textbf{Mô tả} \\
+\hline
+Hiển thị thư mục hiện tại & \texttt{pwd} & In ra đường dẫn tuyệt đối của thư mục hiện tại. \\
+\hline
+Di chuyển thư mục & \texttt{cd <path>} & Chuyển đến thư mục khác trong hệ thống. \\
+\hline
+Liệt kê nội dung & \texttt{ls} & Hiển thị danh sách các tệp và thư mục trong thư mục hiện tại. \\
+\hline
+Tạo thư mục mới & \texttt{mkdir <folder>} & Tạo một thư mục rỗng mới. \\
+\hline
+Xóa tệp/thư mục & \texttt{rm <name>} & Xóa tệp hoặc thư mục; dùng tùy chọn \texttt{-r} để xóa thư mục, \texttt{-f} để bỏ qua xác nhận. \\
+\hline
+Tạo tệp rỗng & \texttt{touch <filename>} & Tạo nhanh một tệp mới hoặc cập nhật thời gian truy cập tệp. \\
+\hline
+Sao chép tệp & \texttt{cp <source> <destination>} & Sao chép tệp hoặc thư mục; dùng tùy chọn \texttt{-i} để xác nhận khi ghi đè. \\
+\hline
+Di chuyển/đổi tên tệp & \texttt{mv <source> <destination>} & Di chuyển tệp sang vị trí khác hoặc đổi tên nếu cùng thư mục. \\
+\hline
+Hiển thị nội dung tệp & \texttt{cat <filename>} & Xem nội dung của tệp văn bản. \\
+\hline
+Chỉnh sửa tệp & \texttt{nano <filename>} & Mở trình soạn thảo văn bản \texttt{nano} ngay trong Terminal. \\
+\hline
+Xóa màn hình & \texttt{clear} & Dọn sạch nội dung hiển thị trong cửa sổ Terminal. \\
+\hline
+Xem lịch sử lệnh & \texttt{history} & Hiển thị danh sách các lệnh đã sử dụng trước đó. \\
+\hline
+Tìm kiếm tệp & \texttt{locate <filename>} & Tìm kiếm tệp nhanh chóng trong toàn hệ thống. \\
+\hline
+So sánh tệp & \texttt{diff <file1> <file2>} & So sánh sự khác biệt giữa hai tệp văn bản. \\
+\hline
+Kiểm tra dung lượng ổ đĩa & \texttt{df} & Hiển thị thông tin về dung lượng sử dụng và còn trống của ổ đĩa. \\
+\hline
+Kiểm tra dung lượng tệp/thư mục & \texttt{du} & Hiển thị kích thước của tệp hoặc thư mục, có thể dùng tùy chọn \texttt{-h} để hiển thị dạng dễ đọc (KB, MB, GB). \\
+\hline
+\end{tabular}
+\end{center}
+
+
+
+\subsection{Chuyển hướng dữ liệu và kỹ thuật Piping}
+$\indent$Trong hệ điều hành Linux, mỗi lệnh khi thực thi đều tương tác với ba luồng dữ liệu cơ bản:
+\begin{itemize}
+    \item \textbf{stdin (0)}: là luồng dữ liệu nhập vào từ bàn phím hoặc từ tệp khác.
+    \item \textbf{stdout (1)}: là luồng dữ liệu xuất ra màn hình (Terminal) sau khi lệnh được thực thi thành công.
+    \item \textbf{stderr (2)}: là nơi hiển thị các thông báo lỗi hoặc cảnh báo khi lệnh thực thi thất bại.
+\end{itemize}
+
+\textbf{Chuyển hướng dữ liệu (Redirection):}  
+Chuyển hướng là kỹ thuật dùng để thay đổi điểm đến của đầu ra hoặc nguồn đầu vào của lệnh.  
+Thay vì in ra màn hình, kết quả có thể được ghi vào tệp, hoặc lấy dữ liệu từ một tệp thay vì bàn phím.  
+
+\begin{itemize}
+    \item Dấu \texttt{>} dùng để ghi đè (overwrite) nội dung tệp.
+    \item Dấu \texttt{>>} dùng để ghi nối thêm (append) nội dung vào cuối tệp mà không xóa dữ liệu cũ.
+    \item Dấu \texttt{<} dùng để lấy dữ liệu đầu vào từ một tệp.
+\end{itemize}
+
+\textbf{Kỹ thuật Piping (|):}  
+Piping là kỹ thuật giúp kết nối nhiều lệnh lại với nhau sao cho đầu ra của lệnh thứ nhất (\texttt{stdout}) trở thành đầu vào (\texttt{stdin}) của lệnh tiếp theo.  
+Cách này giúp xử lý dữ liệu một cách hiệu quả mà không cần tạo tệp tạm.
+
+\subsection{Lệnh \texttt{sudo} và \texttt{su}}
+
+$\indent$Linux được thiết kế theo mô hình đa người dùng, trong đó quyền truy cập tài nguyên được phân tách chặt chẽ để đảm bảo an toàn hệ thống.  
+Hai lệnh phổ biến giúp quản lý quyền truy cập là \texttt{sudo} và \texttt{su}.
+
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Lệnh} & \textbf{Mô tả} \\
+\hline
+\texttt{sudo} & Thực thi lệnh với quyền quản trị (superuser) tạm thời, \\
+               & mà không cần đăng nhập vào tài khoản root. \\
+\hline
+\texttt{su}   & Chuyển hẳn sang một tài khoản khác (thường là root), \\
+               & yêu cầu nhập mật khẩu của tài khoản đó. \\
+\hline
+\end{tabular}
+\end{center}
+
+
+\subsection{Quyền truy cập và mức độ bảo mật trong Linux}
+$\indent$Mỗi tệp hoặc thư mục trong Linux đều có ba nhóm quyền cơ bản nhằm kiểm soát hành vi truy cập:
+
+\begin{itemize}
+    \item \textbf{Chủ sở hữu (Owner)} – Người tạo ra tệp hoặc được gán quyền sở hữu.
+    \item \textbf{Nhóm (Group)} – Một nhóm người dùng được gán quyền nhất định với tệp.
+    \item \textbf{Người khác (Others)} – Tất cả người dùng còn lại trong hệ thống.
+\end{itemize}
+
+\textbf{Ba loại quyền cơ bản:}
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Ký hiệu} & \textbf{Quyền} & \textbf{Giá trị (số học)} \\
+\hline
+r & Đọc (read) & 4 \\
+w & Ghi (write) & 2 \\
+x & Thực thi (execute) & 1 \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{Báo cáo và Trả lời câu hỏi Lab 1}
+\subsection{Giới thiệu chung}
+$\indent$Trong quá trình học tập và tìm hiểu về hệ điều hành Linux, việc nắm vững các thao tác cơ bản trong môi trường dòng lệnh (Command Line Interface – CLI) đóng vai trò hết sức quan trọng. Đây không chỉ là nền tảng giúp người học hiểu rõ hơn về cơ chế hoạt động của hệ thống, mà còn là cơ sở để thực hiện các tác vụ quản trị, lập trình và tự động hóa sau này.
+
+Phần này của báo cáo sẽ dựa trên cơ sở lý thuyết đã trình bày ở chương trước để trả lời chi tiết các câu hỏi trong \textbf{Lab 1 – Introduction to Linux}.  
+Cụ thể, nội dung tập trung vào việc:
+\begin{itemize}
+    \item Phân tích đặc điểm của các loại \texttt{shell} trong Linux và vai trò của chúng.
+    \item Thực hành các lệnh cơ bản như \texttt{ls} với các tùy chọn khác nhau, nhằm hiểu cách hệ thống tổ chức và hiển thị tệp tin.
+    \item So sánh và áp dụng kỹ thuật \textbf{chuyển hướng dữ liệu (redirection)} và \textbf{piping} trong thực tế.
+    \item Tìm hiểu sự khác biệt giữa hai lệnh \texttt{sudo} và \texttt{su} trong việc quản lý quyền truy cập của người dùng.
+    \item Đánh giá mức độ an toàn của việc phân quyền, đặc biệt là quyền truy cập \texttt{777}, đối với các tệp và dịch vụ quan trọng trong hệ thống.
+\end{itemize}
+
+
+\subsection{Các loại Shell phổ biến trong hệ điều hành Linux}
+\subsubsection*{Câu hỏi:\\
+Hãy liệt kê một số loại \texttt{shell} phổ biến được sử dụng trong hệ điều hành Linux và trình bày các đặc điểm nổi bật, ưu điểm của từng loại.}
+$\indent$\underline{\textbf{\textit{Trả lời:}}}
+
+Trong hệ điều hành \textbf{Linux/UNIX}, \textit{shell} đóng vai trò là giao diện dòng lệnh (\textbf{CLI – Command Line Interface}) giữa người dùng và nhân hệ điều hành (\textbf{kernel}). Shell tiếp nhận lệnh từ người dùng, phân tích cú pháp và chuyển lệnh cho kernel để thực thi.  
+Từ khi UNIX ra đời, nhiều loại shell đã được phát triển nhằm tối ưu hóa khả năng tương tác, lập trình và tự động hóa. Dưới đây là phân tích chi tiết các loại shell tiêu biểu:
+
+\subsection*{Bourne Shell (sh)}
+
+\textbf{Nguồn gốc và phát triển:} Bourne Shell được phát triển bởi \textbf{Stephen Bourne} tại \textit{AT$\&$T Bell Labs} vào năm 1977. Đây là shell chuẩn đầu tiên trong UNIX, đặt nền móng cho các shell sau này.\\
+
+\textbf{Đặc điểm kỹ thuật:}
+\begin{itemize}
+    \item Cú pháp đơn giản, ít phức tạp, tập trung vào thực thi lệnh hệ thống.
+    \item Không hỗ trợ các tính năng hiện đại như tự động hoàn thành (tab completion) hoặc lịch sử lệnh (command history).
+    \item Hỗ trợ thực hiện các lệnh hệ thống, biến môi trường và lập trình shell cơ bản.
+    
+\end{itemize}
+
+\textbf{Ưu điểm:}
+\begin{itemize}
+    \item Tốc độ thực thi nhanh, phù hợp cho các tác vụ hệ thống nền tảng, tiêu tốn ít tài nguyên.
+    \item Tính tương thích cao, hầu hết các shell khác đều được phát triển dựa trên chuẩn của Bourne Shell như Bash, Korn, Zsh.
+    \item Thích hợp cho các script hệ thống chạy trong môi trường hạn chế (minimal system).
+\end{itemize}
+
+\textbf{Hạn chế:}
+\begin{itemize}
+    \item Khó sử dụng trong môi trường tương tác, thiếu tính năng tiện ích.
+    \item Không có cơ chế command editing và job control.
+\end{itemize}
+
+\textbf{Ứng dụng thực tế:} Bourne Shell vẫn được sử dụng trong các script hệ thống UNIX truyền thống và hệ thống nhúng (embedded systems) do tính nhẹ và ổn định cao.
+%=========================================================
+\subsection*{Bash (Bourne Again Shell)}
+
+\textbf{Nguồn gốc và phát triển:} Bash do \textbf{Brian Fox} phát triển cho dự án \textit{GNU} năm 1989, là phiên bản mở rộng mạnh mẽ của Bourne Shell. \\
+
+\textbf{Đặc điểm kỹ thuật:}
+\begin{itemize}
+    \item Có khả năng xử lý mảng, biểu thức điều kiện, vòng lặp, và hàm – hỗ trợ tốt cho lập trình shell script phức tạp.
+    \item Hỗ trợ lịch sử lệnh (command history), hoàn thành tự động (auto-completion) và biên tập dòng lệnh nâng cao.
+    \item Hỗ trợ toán tử số học, logic, và chuỗi ký tự và cung cấp các biến đặc biệt (như $?, $$, $!, …) giúp theo dõi và kiểm soát tiến trình.
+\end{itemize}
+
+\textbf{Ưu điểm:}
+\begin{itemize}
+    \item Là shell mặc định trong hầu hết các bản phân phối Linux (Ubuntu, Fedora, CentOS, v.v.).
+    \item Tính tương thích cao với các shell Bourne cũ, phù hợp lập trình shell script, DevOps, CI/CD.
+    \item Giao diện thân thiện, dễ học, dễ sử dụng, cộng đồng hỗ trợ rộng rãi.
+\end{itemize}
+
+\textbf{Hạn chế:}
+\begin{itemize}
+    \item Dung lượng và mức tiêu thụ tài nguyên cao hơn Bourne Shell.
+\end{itemize}
+
+\textbf{Ứng dụng thực tế:} Là shell mặc định của hầu hết các bản Linux hiện nay; thường được sử dụng trong lập trình shell script, quản trị hệ thống và DevOps automation (CI/CD).
+
+%=========================================================
+\subsection*{C Shell (csh) và Tcsh}
+
+\textbf{Nguồn gốc và phát triển:} Được phát triển bởi Bill Joy (người sáng lập Sun Microsystems) phát triển vào cuối thập niên 1970. Tên gọi “C Shell” xuất phát từ cú pháp tương tự ngôn ngữ lập trình C. Phiên bản mở rộng là tcsh (tenex C shell).\\
+
+\textbf{Đặc điểm kỹ thuật:}
+\begin{itemize}
+    \item Hỗ trợ cú pháp lập trình dạng C, giúp dễ hiểu với lập trình viên ngôn ngữ C.
+    \item Cung cấp tính năng alias và history sớm nhất trong các shell.
+    \item Tcsh bổ sung thêm khả năng hoàn thành lệnh tự động và chỉnh sửa dòng lệnh.
+\end{itemize}
+
+\textbf{Ưu điểm:}
+\begin{itemize}
+    \item Giao diện thân thiện với lập trình viên C.
+    \item Tốc độ thực thi cao, dễ dàng quản lý nhiều tiến trình cùng lúc.
+\end{itemize}
+
+\textbf{Hạn chế:}
+\begin{itemize}
+    \item Khó viết shell script phức tạp, do cú pháp ít linh hoạt hơn bash.
+    \item Không tương thích hoàn toàn với Bourne Shell scripts.
+\end{itemize}
+
+\textbf{Ứng dụng thực tế:} Được sử dụng trong môi trường học thuật và nghiên cứu khoa học, hoặc khi cần tương tác nhanh với hệ thống qua dòng lệnh.
+
+%=========================================================
+\subsection*{Korn Shell (ksh)}
+
+\textbf{Nguồn gốc và phát triển:} Korn Shell do \textbf{David Korn} tại \textit{AT$\&$T Bell Labs} phát triển đầu thập niên 1980, kết hợp ưu điểm của Bourne Shell \texttt{(sh)} và C Shell \texttt{(csh)}.\\  
+
+\textbf{Đặc điểm kỹ thuật:}
+\begin{itemize}
+    \item Hỗ trợ lập trình shell mạnh mẽ với cấu trúc điều khiển phong phú như hàm, mảng, alias, history và xử lý tiến trình nền.
+    \item Có cơ chế command history và alias tương tự Bash.
+\end{itemize}
+
+\textbf{Ưu điểm:}
+\begin{itemize}
+    \item Hiệu năng cao, phù hợp cho hệ thống máy chủ cần xử lý nhiều tiến trình.
+    \item Thường được sử dụng trong môi trường doanh nghiệp UNIX (như IBM AIX, HP-UX).
+\end{itemize}
+
+\textbf{Hạn chế:}
+\begin{itemize}
+    \item Phổ biến kém hơn Bash trong các bản phân phối Linux.
+    \item Một số tính năng độc quyền, không tương thích với các shell khác.
+\end{itemize}
+
+
+%=========================================================
+\subsection*{Z Shell (zsh)}
+
+\textbf{Nguồn gốc và phát triển:} Z Shell do \textbf{Paul Falstad} phát triển năm 1990, kết hợp các ưu điểm của Bash, Tcsh và Ksh.  \\
+
+\textbf{Đặc điểm kỹ thuật:}
+\begin{itemize}
+    \item Cung cấp các tính năng nâng cao về tự động hoàn thành lệnh, sửa lỗi cú pháp tự động, và gợi ý lệnh thông minh.
+    \item Giao diện thân thiện, hỗ trợ tùy chỉnh prompt, plugin, và theme (qua công cụ Oh My Zsh).
+    \item Có khả năng quản lý phiên làm việc và xử lý lệnh mạnh mẽ hơn Bash.
+\end{itemize}
+
+\textbf{Ưu điểm:}
+\begin{itemize}
+    \item Cấu hình linh hoạt, thẩm mỹ và hiệu quả cao trong môi trường
+    \item Tối ưu cho người dùng cá nhân và nhà phát triển phần mềm.
+    \item Phù hợp với lập trình viên hiện đại, nhất là trong môi trường phát triển đa nền tảng.
+\end{itemize}
+
+\textbf{Hạn chế:}
+\begin{itemize}
+    \item Cấu hình ban đầu phức tạp, cần người dùng có kinh nghiệm.
+    \item Dễ bị “quá tải” tính năng nếu cài nhiều plugin không cần thiết.
+\end{itemize}
+
+\textbf{Ứng dụng thực tế:} Zsh đang trở thành shell mặc định của macOS (từ phiên bản Catalina) và được ưa chuộng trong giới lập trình viên, DevOps, Data Engineer nhờ sự linh hoạt và tính thẩm mỹ cao.
+
+
+
+
+
+
+\subsection{Thực hành và phân tích lệnh \texttt{ls}}
+\subsubsection*{Bài tập:\\
+Hãy thử nghiệm các tùy chọn khác nhau của lệnh \texttt{ls} (ví dụ: \texttt{-l}, \texttt{-a}, \texttt{-la}, …), quan sát và phân tích ý nghĩa của kết quả đầu ra.  
+Ngoài ra, hãy thử kết hợp nhiều tùy chọn cùng lúc và đánh giá sự khác biệt.}
+$\indent$\underline{\textbf{\textit{Trả lời:}}}\\
+
+\textbf{Cú pháp tổng quát của lệnh \texttt{ls}:}
+\begin{tcolorbox}[myterminal]
+ls [options] [parameters]
+\end{tcolorbox}
+
+
+\begin{itemize}
+    \item \textbf{options (tùy chọn):} Thay đổi hành vi hiển thị của lệnh.
+    \item \textbf{parameters (tham số):} Thư mục hoặc tệp muốn thao tác; nếu bỏ trống, \texttt{ls} sử dụng thư mục hiện tại.
+\end{itemize}
+
+\textbf{Các tùy chọn thường dùng:}
+
+
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{|c|p{8cm}|c|}
+\hline
+\textbf{Lệnh} & \textbf{Giải thích} \\
+\hline
+ls & Liệt kê tên các file và thư mục trong thư mục hiện tại   \\
+\hline
+ls -l & Liệt kê chi tiết (quyền, chủ sở hữu, kích thước, thời gian sửa đổi)  \\
+\hline
+ls -a & Hiển thị tất cả file, bao gồm file ẩn (bắt đầu bằng `.`)\\
+\hline
+ls -la & Kết hợp chi tiết + hiển thị file ẩn  \\
+\hline
+ls -h & Hiển thị kích thước file dễ đọc (KB, MB, GB)  \\
+\hline
+ls -t & Sắp xếp theo thời gian sửa đổi, mới → cũ  \\
+\hline
+ls -r & Đảo ngược thứ tự hiển thị  \\
+\hline
+ls -R & Liệt kê đệ quy tất cả thư mục con  \\
+\hline
+ls -S & Sắp xếp theo kích thước file, lớn → nhỏ  \\
+\hline
+ls --color=auto & Tô màu output theo loại file  \\
+\hline
+\end{tabular}
+\caption{Các lệnh \texttt{ls} phổ biến trong Linux}
+\label{tab:ls-common}
+\end{table}
+\textbf{Lưu ý:} Các tùy chọn có thể kết hợp, ví dụ: \texttt{ls -lah} kết hợp \texttt{-l}, \texttt{-a}, \texttt{-h}.\\
+
+\newpage
+\textbf{Thí nghiệm thực tế:}
+\begin{itemize}
+    \item \textbf{Lệnh cơ bản:}
+    \begin{tcolorbox}[myterminal]
+    vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ ls
+\end{tcolorbox}
+\textbf{Kết quả:} Liệt kê tệp và thư mục trong thư mục hiện tại, không hiển thị chi tiết và không tệp ẩn.
+\begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Danh sách file, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+\begin{verbatim}
+Report_Lab1.pdf  calc_pro.sh        calc_simple_v2.sh   document.txt
+calc.sh          calc_simple_v1.sh  compare_2num.sh    compare_loop.sh
+\end{verbatim}
+\end{tcolorbox}
+
+    \item \textbf{Liệt kê chi tiết: ls -l}
+    \begin{tcolorbox}[myterminal]
+        vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ ls -l
+    \end{tcolorbox}
+    \textbf{Ví dụ kết quả:}
+    \begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Danh sách file, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+    \begin{verbatim}
+     total 44
+    -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:17 Report_Lab1.pdf
+    -rwxr-xr-x 1 vopham05 vopham05 6206 Oct 12 00:13 calc.sh
+    -rwxr-xr-x 1 vopham05 vopham05 9078 Oct 10 17:32 calc_pro.sh
+    -rwxr-xr-x 1 vopham05 vopham05 2031 Oct 10 18:34 calc_simple_v1.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1904 Oct 10 18:31 calc_simple_v2.sh
+    -rwxr-xr-x 1 vopham05 vopham05  780 Oct 10 18:38 compare_2num.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1113 Oct 10 18:45 compare_for.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1260 Oct 10 18:43 compare_loop.sh
+    -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:20 document.txt
+    -rwxr-xr-x 1 vopham05 vopham05 3903 Oct 10 18:52 student_average.sh
+\end{verbatim}
+\end{tcolorbox}
+
+\textbf{Phân tích:}
+\begin{itemize}
+    \item \texttt{d} = thư mục, \texttt{-} = tệp: Tất cả file trong output đều là tệp \texttt{-}.
+    \item Quyền truy cập: \texttt{r} = đọc, \texttt{w} = ghi, \texttt{x} = thực thi.
+    \item Chủ sở hữu và nhóm: \texttt{vopham05 vopham05}.
+    \item Kích thước file: 0 bytes (Report\_Lab1.pdf), 6206 bytes (calc.sh), 9078 bytes (calc\_pro.sh).
+    \item Ngày giờ chỉnh sửa cuối như Oct 12 15:17 cho Report\_Lab1.pdf.
+\end{itemize}
+
+    \item \textbf{Hiển thị tệp ẩn: ls -a}
+    \begin{tcolorbox}[myterminal]
+    vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ ls -a
+    \end{tcolorbox}
+    \textbf{Kết quả:}
+    \begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Danh sách file, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+    \begin{verbatim}
+    .   .calc_ans   Report_Lab1.pdf  calc_pro.sh   document.txt 
+    ..  .calc_hist  calc.sh  calc_simple_v1.sh   student_average.sh 
+    \end{verbatim}
+    \end{tcolorbox}
+    \begin{itemize}
+        \item \texttt{.} = Thư mục hiện tại, tham chiếu đến thư mục đang làm việc.
+        \item \texttt{..} = Thư mục cha, tham chiếu đến thư mục chứa thư mục hiện tại.
+        \item \texttt{.calc\_ans}, \texttt{.calc\_hist} = Các thư mục ẩn, thường dùng để lưu trữ kết quả, lịch sử tính toán hoặc dữ liệu tạm của Lab.
+        \item \texttt{.pdf}, \texttt{.sh} \texttt{.txt} = Các file dữ liệu và script.
+    \end{itemize}
+
+    \item \textbf{Kết hợp nhiều tùy chọn: ls -la}
+    \begin{tcolorbox}[myterminal]
+  vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ ls -la
+    \end{tcolorbox}
+    \textbf{Ví dụ kết quả:}
+    \begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Danh sách file, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+    \begin{verbatim}
+     total 60
+    drwxr-xr-x 2 vopham05 vopham05 4096 Oct 12 15:20 .
+    drwxr-x--- 5 vopham05 vopham05 4096 Oct 10 18:27 ..
+    -rw-r--r-- 1 vopham05 vopham05    2 Oct  8 15:11 .calc_ans
+    -rw-r--r-- 1 vopham05 vopham05   50 Oct  8 15:11 .calc_hist
+    -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:17 Report_Lab1.pdf
+    -rwxr-xr-x 1 vopham05 vopham05 6206 Oct 12 00:13 calc.sh
+    -rwxr-xr-x 1 vopham05 vopham05 9078 Oct 10 17:32 calc_pro.sh
+    -rwxr-xr-x 1 vopham05 vopham05 2031 Oct 10 18:34 calc_simple_v1.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1904 Oct 10 18:31 calc_simple_v2.sh
+    -rwxr-xr-x 1 vopham05 vopham05  780 Oct 10 18:38 compare_2num.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1113 Oct 10 18:45 compare_for.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1260 Oct 10 18:43 compare_loop.sh
+    -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:20 document.txt
+    -rwxr-xr-x 1 vopham05 vopham05 3903 Oct 10 18:52 student_average.sh
+    \end{verbatim}
+        \end{tcolorbox}
+    - Liệt kê chi tiết các tệp kèm thêm tệp ẩn.
+
+    \item \textbf{Hiển thị kích thước dễ đọc: ls -lh}
+    \begin{tcolorbox}[myterminal]
+     vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ ls -lh
+    \end{tcolorbox}
+    \textbf{Ví dụ kết quả:}
+    \begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Danh sách file, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+    \begin{verbatim}
+    total 44K
+    -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:17 Report_Lab1.pdf
+    -rwxr-xr-x 1 vopham05 vopham05 6.1K Oct 12 00:13 calc.sh
+    -rwxr-xr-x 1 vopham05 vopham05 8.9K Oct 10 17:32 calc_pro.sh
+    -rwxr-xr-x 1 vopham05 vopham05 2.0K Oct 10 18:34 calc_simple_v1.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1.9K Oct 10 18:31 calc_simple_v2.sh
+    -rwxr-xr-x 1 vopham05 vopham05  780 Oct 10 18:38 compare_2num.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1.1K Oct 10 18:45 compare_for.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1.3K Oct 10 18:43 compare_loop.sh
+    -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:20 document.txt
+    -rwxr-xr-x 1 vopham05 vopham05 3.9K Oct 10 18:52 student_average.sh
+    \end{verbatim}
+      \end{tcolorbox}
+    - Kích thước tệp được hiển thị theo đơn vị KB, MB.
+
+
+    \item \textbf{Đảo ngược thứ tự: ls -ltr}
+        \begin{tcolorbox}[myterminal]
+          vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ ls -ltr
+        \end{tcolorbox}
+         \textbf{Ví dụ kết quả:}
+    \begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Danh sách file, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+    \begin{verbatim}
+    total 44
+    -rwxr-xr-x 1 vopham05 vopham05 9078 Oct 10 17:32 calc_pro.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1904 Oct 10 18:31 calc_simple_v2.sh
+    -rwxr-xr-x 1 vopham05 vopham05 2031 Oct 10 18:34 calc_simple_v1.sh
+    -rwxr-xr-x 1 vopham05 vopham05  780 Oct 10 18:38 compare_2num.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1260 Oct 10 18:43 compare_loop.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1113 Oct 10 18:45 compare_for.sh
+    -rwxr-xr-x 1 vopham05 vopham05 3903 Oct 10 18:52 student_average.sh
+    -rwxr-xr-x 1 vopham05 vopham05 6206 Oct 12 00:13 calc.sh
+    -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:17 Report_Lab1.pdf
+    -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:20 document.txt
+    \end{verbatim}
+    \end{tcolorbox}
+        - Liệt kê chi tiết theo thời gian từ cũ đến mới.
+
+    \item \textbf{Lệnh kết hợp: \texttt{ls -lth}}
+    \begin{tcolorbox}[myterminal]
+      vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ ls -lth
+    \end{tcolorbox}
+         \textbf{Ví dụ kết quả:}
+    \begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Danh sách file, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+    \begin{verbatim}
+    total 44K
+    -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:20 document.txt
+    -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:17 Report_Lab1.pdf
+    -rwxr-xr-x 1 vopham05 vopham05 6.1K Oct 12 00:13 calc.sh
+    -rwxr-xr-x 1 vopham05 vopham05 3.9K Oct 10 18:52 student_average.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1.1K Oct 10 18:45 compare_for.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1.3K Oct 10 18:43 compare_loop.sh
+    -rwxr-xr-x 1 vopham05 vopham05  780 Oct 10 18:38 compare_2num.sh
+    -rwxr-xr-x 1 vopham05 vopham05 2.0K Oct 10 18:34 calc_simple_v1.sh
+    -rwxr-xr-x 1 vopham05 vopham05 1.9K Oct 10 18:31 calc_simple_v2.sh
+    -rwxr-xr-x 1 vopham05 vopham05 8.9K Oct 10 17:32 calc_pro.sh
+    \end{verbatim}
+     \end{tcolorbox}
+    - Lệnh \texttt{ls -lth} hiển thị chi tiết các file, dung lượng dễ đọc, sắp xếp theo thời gian sửa đổi gần nhất
+
+\item \textbf{Lệnh kết hơp: ls -ltsh}
+    \begin{tcolorbox}[myterminal]
+      vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ ls -ltsh
+    \end{tcolorbox}
+         \textbf{Ví dụ kết quả:}
+    \begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Danh sách file, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+    \begin{verbatim}
+     total 44K
+       0 -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:20 document.txt
+       0 -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:17 Report_Lab1.pdf
+    8.0K -rwxr-xr-x 1 vopham05 vopham05 6.1K Oct 12 00:13 calc.sh
+    4.0K -rwxr-xr-x 1 vopham05 vopham05 3.9K Oct 10 18:52 student_average.sh
+    4.0K -rwxr-xr-x 1 vopham05 vopham05 1.1K Oct 10 18:45 compare_for.sh
+    4.0K -rwxr-xr-x 1 vopham05 vopham05 1.3K Oct 10 18:43 compare_loop.sh
+    4.0K -rwxr-xr-x 1 vopham05 vopham05  780 Oct 10 18:38 compare_2num.sh
+    4.0K -rwxr-xr-x 1 vopham05 vopham05 2.0K Oct 10 18:34 calc_simple_v1.sh
+    4.0K -rwxr-xr-x 1 vopham05 vopham05 1.9K Oct 10 18:31 calc_simple_v2.sh
+     12K -rwxr-xr-x 1 vopham05 vopham05 8.9K Oct 10 17:32 calc_pro.sh
+    \end{verbatim}
+      \end{tcolorbox}
+\textbf{Các tùy chọn:}
+\begin{itemize}
+    \item \texttt{-l} : Liệt kê chi tiết (quyền, owner, group, kích thước, thời gian sửa).
+    \item \texttt{-t} : Sắp xếp theo thời gian sửa đổi, mới nhất lên đầu.
+    \item \texttt{-h} : Hiển thị kích thước dễ đọc (KB, MB…).
+    \item \texttt{-s} : Hiển thị kích thước file theo block (thường 1 block \approx 1 KB).
+    
+\end{itemize}
+    - Lệnh \texttt{ls -ltsh} dùng để xem danh sách file chi tiết, vừa hiển thị dung lượng dễ đọc, vừa sắp xếp file mới nhất lên đầu, tiện kiểm tra các file lớn hoặc vừa thay đổi.
+
+
+
+    
+\end{itemize}
+
+
+
+
+
+
+
+
+\subsection{So sánh kỹ thuật chuyển hướng đầu ra và Piping}
+\subsubsection*{Câu hỏi:\\
+Hãy so sánh sự khác biệt giữa kỹ thuật \textbf{chuyển hướng đầu ra} (\texttt{>} và \texttt{>>}) với \textbf{kỹ thuật Piping} (\texttt{|}) trong Linux.  
+Phân tích trường hợp sử dụng phù hợp của từng kỹ thuật và minh họa bằng ví dụ cụ thể.}
+$\indent$\underline{\textbf{\textit{Trả lời:}}}
+
+\subsubsection*{• CHUYỂN HƯỚNG ĐẦU RA (REDIRECTION)}
+\begin{itemize}
+    \item Đưa kết quả xuất ra từ lệnh vào file thay vì hiển thị trên terminal. Giúp lưu dữ liệu để tham khảo hoặc sử dụng lại sau này.
+    \item \textbf{Các dạng phổ biến:}
+    \begin{itemize}
+        \item \texttt{>} : Ghi đè file (nếu file tồn tại, nội dung cũ sẽ bị xóa).
+        \item \texttt{>>} : Ghi nối vào cuối file, giữ nguyên dữ liệu cũ.
+    \end{itemize}
+    \item \textbf{Ví dụ minh họa:}
+  \begin{tcolorbox}[myterminal]
+      vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ ls -ltsh > file\_list.txt \\
+      echo "Hello World!" >> file\_list.txt     
+    \end{tcolorbox}
+             \textbf{Kết quả:}
+         \begin{tcolorbox}[myterminal]
+      vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ cat file\_list.txt 
+    \end{tcolorbox}     
+        \begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Danh sách file, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+    \begin{verbatim}
+    total 48
+     0 -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 17:02 file_list.txt
+     0 -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 17:00 document.txt
+     4 -rw-r--r-- 1 vopham05 vopham05  767 Oct 12 17:00 documet.txt
+     0 -rw-r--r-- 1 vopham05 vopham05    0 Oct 12 15:17 Report_Lab1.pdf
+     8 -rwxr-xr-x 1 vopham05 vopham05 6206 Oct 12 00:13 calc.sh
+     4 -rwxr-xr-x 1 vopham05 vopham05 3903 Oct 10 18:52 student_average.sh
+     4 -rwxr-xr-x 1 vopham05 vopham05 1113 Oct 10 18:45 compare_for.sh
+     4 -rwxr-xr-x 1 vopham05 vopham05 1260 Oct 10 18:43 compare_loop.sh
+     4 -rwxr-xr-x 1 vopham05 vopham05  780 Oct 10 18:38 compare_2num.sh
+     4 -rwxr-xr-x 1 vopham05 vopham05 2031 Oct 10 18:34 calc_simple_v1.sh
+     4 -rwxr-xr-x 1 vopham05 vopham05 1904 Oct 10 18:31 calc_simple_v2.sh
+    12 -rwxr-xr-x 1 vopham05 vopham05 9078 Oct 10 17:32 calc_pro.sh
+    Hello World!
+    \end{verbatim}
+       \end{tcolorbox}
+    \item \textbf{Trường hợp sử dụng:}
+    \begin{itemize}
+        \item Lưu kết quả chạy lệnh để tham khảo sau
+        \item Tạo báo cáo hoặc log file
+        \item Khi muốn kết quả tồn tại lâu dài
+    \end{itemize}
+    \item \textbf{Ưu điểm:} Kết quả lưu lại lâu dài, dễ dàng chia sẻ
+    \item \textbf{Nhược điểm:} Không xử lý dữ liệu theo luồng; dùng \texttt{>} có thể mất dữ liệu cũ
+\end{itemize}
+
+\subsubsection*{• PIPING (\texttt{|})}
+\begin{itemize}
+    \item Truyền trực tiếp đầu ra của lệnh này làm đầu vào cho lệnh khác, tạo chuỗi xử lý dữ liệu liên tục mà không cần file trung gian
+    \item \textbf{Ví dụ minh họa 1:} \\
+    - Lọc file có tên chứa “calc”)
+  \begin{tcolorbox}[myterminal]
+      vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ ls -ltsh ls -ltsh | grep calc
+    \end{tcolorbox} \textbf{Kết quả:}
+            \begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Danh sách file, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+    \begin{verbatim}
+     8.0K -rwxr-xr-x 1 vopham05 vopham05 6.1K Oct 12 00:13 calc.sh
+    4.0K -rwxr-xr-x 1 vopham05 vopham05 2.0K Oct 10 18:34 calc_simple_v1.sh
+    4.0K -rwxr-xr-x 1 vopham05 vopham05 1.9K Oct 10 18:31 calc_simple_v2.sh
+     12K -rwxr-xr-x 1 vopham05 vopham05 8.9K Oct 10 17:32 calc_pro.sh
+    \end{verbatim}
+ \end{tcolorbox}
+   \item \textbf{Ví dụ minh họa 2:}\\
+   - Lọc 3 file có tên chứa “calc” và sắp xếp theo kích thước từ lớn đén nhỏ 
+  \begin{tcolorbox}[myterminal]
+      vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ ls -ltsh | grep calc | sort -h -r | head -3
+    \end{tcolorbox} \textbf{Kết quả:}
+                \begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Danh sách file, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+    \begin{verbatim}
+     12K -rwxr-xr-x 1 vopham05 vopham05 8.9K Oct 10 17:32 calc_pro.sh
+    8.0K -rwxr-xr-x 1 vopham05 vopham05 6.1K Oct 12 00:13 calc.sh
+    4.0K -rwxr-xr-x 1 vopham05 vopham05 2.0K Oct 10 18:34 calc_simple_v1.sh
+    \end{verbatim}
+     \end{tcolorbox}
+
+
+
+
+    \item \textbf{Trường hợp sử dụng:}
+    \begin{itemize}
+        \item Xử lý dữ liệu ngay lập tức, không cần file trung gian
+        \item Lọc, sắp xếp, đếm, hoặc trích xuất thông tin từ lệnh khác
+        \item Khi muốn nối nhiều lệnh thành chuỗi (pipeline)
+    \end{itemize}
+    \item \textbf{Ưu điểm:} Tiết kiệm bộ nhớ và thời gian, xử lý dữ liệu nhanh, dễ dàng kết hợp nhiều lệnh
+    \item \textbf{Nhược điểm:} Kết quả không lưu lâu dài, khó kiểm tra lại nếu pipeline phức tạp
+\end{itemize}
+
+    \subsubsection*{• Kết hợp cả hai kỹ thuật}
+
+\begin{tcolorbox}[myterminal]
+      vopham05@DESKTOP-2HD73M6:\textasciitilde /LAB1\$ ls -ltsh | grep calc | sort -h -r > file\_list.txt
+    \end{tcolorbox}
+
+\begin{itemize}
+    \item Vừa xử lý dữ liệu trực tiếp (chuỗi lệnh), vừa lưu kết quả vào file để sử dụng sau
+    \item Thường dùng trong báo cáo, phân tích log, thống kê file
+\end{itemize}
+
+
+
+
+
+
+
+\subsection{So sánh giữa lệnh \texttt{sudo} và \texttt{su}}
+\subsubsection*{Câu hỏi: \\
+Hãy trình bày sự khác biệt giữa hai lệnh \texttt{sudo} và \texttt{su}, làm rõ cơ chế hoạt động, phạm vi quyền hạn và tình huống sử dụng của mỗi lệnh.}
+$\indent$\underline{\textbf{\textit{Trả lời:}}}
+\subsubsection*{• Khái niệm:}
+\begin{itemize}
+    \item \textbf{\texttt{su} (switch user):} Chuyển sang một tài khoản khác, mặc định là root. Toàn bộ phiên làm việc sẽ chạy với quyền của user đích. Yêu cầu mật khẩu của user đích.
+    \item \textbf{\texttt{sudo} (superuser do):} Thực thi một lệnh với quyền root hoặc quyền user khác mà không cần đăng nhập vào tài khoản đó. Quyền được quản lý qua \texttt{/etc/sudoers}. Yêu cầu mật khẩu của user hiện tại.
+\end{itemize}
+
+\subsubsection*{• Cơ chế hoạt động:}
+\begin{itemize}
+    \item \textbf{\texttt{su}:} Khi chạy \texttt{su}, một shell mới được mở dưới user đích, mọi lệnh trong shell đó chạy với quyền user mới. 
+    \begin{verbatim}
+    vopham05@DESKTOP-2HD73M6:~/LAB1$ su          # chuyển sang root
+    vopham05@DESKTOP-2HD73M6:~/LAB1$ su vopham05 # chuyển sang user vopham05
+    \end{verbatim}
+
+    
+    \item \textbf{\texttt{sudo}:} Khi chạy \texttt{sudo}, chỉ lệnh đó được thực thi với quyền cao hơn. Sau khi lệnh kết thúc, user trở lại quyền ban đầu. Ví dụ:
+    \begin{verbatim}
+    sudo apt update
+    sudo cp file1 /root/
+    sudo -u vopham05 whoami
+    \end{verbatim}
+\end{itemize}
+
+\subsubsection*{• Phạm vi quyền hạn:}
+\begin{tabular}{|l|l|l|}
+\hline
+Tiêu chí & \texttt{su} & \texttt{sudo} \\
+\hline
+Quyền hạn & Toàn quyền của user đích & Quyền hạn hạn chế, theo sudoers \\
+\hline
+Phạm vi & Toàn bộ phiên shell & Chỉ lệnh được thực thi \\
+\hline
+Mật khẩu yêu cầu & Mật khẩu user đích & Mật khẩu user hiện tại \\
+\hline
+Theo dõi / log & Không log chi tiết & Log chi tiết từng lệnh \\
+\hline
+Bảo mật & Nguy cơ nếu mật khẩu root bị lộ & An toàn hơn, phân quyền chi tiết \\
+\hline
+Thao tác & Phải thoát shell để quay lại quyền cũ & Tự động trở về quyền user ban đầu sau lệnh \\
+\hline
+\end{tabular}
+
+
+\subsubsection*{• Ưu nhược điểm:}
+\begin{itemize}
+    \item \textbf{\texttt{su}:} 
+    \begin{itemize}
+        \item Ưu điểm: Toàn quyền root, tiện thao tác nhiều lệnh liên tiếp.
+        \item Nhược điểm: Cần mật khẩu user đích, không log lệnh, rủi ro bảo mật cao.
+    \end{itemize}
+    \item \textbf{\texttt{sudo}:}
+    \begin{itemize}
+        \item Ưu điểm: Thực thi lệnh riêng lẻ với quyền cao, log chi tiết, phân quyền linh hoạt.
+        \item Nhược điểm: Phải thêm \texttt{sudo} trước mỗi lệnh, cấu hình sudoers phức tạp.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{• Tình huống sử dụng:}
+\begin{itemize}
+    \item \textbf{\texttt{su}:} Khi cần toàn quyền root để chạy nhiều lệnh liên tiếp; quản trị hệ thống dài hạn.
+    \item \textbf{\texttt{sudo}:} Khi cần thực thi lệnh cụ thể với quyền root; bảo mật, kiểm soát quyền user; môi trường nhiều user.
+\end{itemize}
+
+
+
+
+
+
+\subsection{Phân tích quyền truy cập \texttt{777} đối với các dịch vụ quan trọng}
+\subsubsection*{Câu hỏi:\\
+Hãy thảo luận về tác động và rủi ro bảo mật khi thiết lập quyền truy cập \texttt{777} cho các dịch vụ quan trọng như \textbf{web hosting}, \textbf{cơ sở dữ liệu}, hoặc các tệp hệ thống.  
+Đưa ra quan điểm và đề xuất cách thiết lập quyền an toàn hơn trong thực tế.}
+$\indent$\underline{\textbf{\textit{Trả lời:}}}
+\begin{itemize}
+    \item \textbf{Quyền 777 là gì và cơ chế hoạt động:} 
+    \begin{itemize}
+        \item Quyền \texttt{777} cho phép \textbf{Owner, Group và Others} đều có quyền đọc (r), ghi (w) và thực thi (x) trên file hoặc thư mục.
+        \item Khi áp dụng, \textbf{mọi user trên hệ thống} đều có thể đọc, chỉnh sửa, xóa hoặc thực thi file/thư mục mà không cần phân quyền đặc biệt.
+        \item Ký hiệu hiển thị: \texttt{-rwxrwxrwx}.
+    \end{itemize}
+
+    \item \textbf{Rủi ro bảo mật đối với các dịch vụ quan trọng:}
+    \begin{itemize}
+        \item \textbf{Web Hosting:}
+        \begin{itemize}
+            \item File và thư mục web nếu đặt 777 có thể cho phép \textbf{mọi user, kể cả attacker} upload script độc hại hoặc chỉnh sửa mã nguồn.
+            \item Rủi ro thực tế: website bị \textit{deface}, cài \textit{backdoor}, hoặc đánh cắp dữ liệu người dùng.
+        \end{itemize}
+        
+        \item \textbf{Cơ sở dữ liệu:}
+        \begin{itemize}
+            \item File dữ liệu hoặc file cấu hình đặt 777 sẽ cho phép \textbf{mọi user} đọc, ghi hoặc xóa dữ liệu quan trọng.
+            \item Hậu quả có thể làm thông tin nhạy cảm bị lộ, dữ liệu bị thay đổi hoặc phá hủy, dẫn đến gián đoạn dịch vụ và mất uy tín.
+        \end{itemize}
+        
+        \item \textbf{Tệp hệ thống:}
+        \begin{itemize}
+            \item File hệ thống quan trọng đặt 777 cho phép \textbf{mọi user chỉnh sửa hoặc xóa file}, tạo nguy cơ chiếm quyền root, tạo tài khoản giả hoặc phá hủy hệ thống.
+            \item Đây là \textbf{lỗ hổng nghiêm trọng}, đặc biệt trên hệ thống multi-user hoặc server truy cập Internet.
+        \end{itemize}
+    \end{itemize}
+  
+    \item \textbf{Cách thiết lập quyền an toàn hơn:}
+    \begin{itemize}
+        \item Nguyên tắc chung là chỉ nên cấp \textbf{quyền tối thiểu cần thiết} (Principle of Least Privilege), tránh mở rộng quyền cho Others nếu không cần thiết.
+        \item Thiết lập cụ thể:
+        \begin{itemize}
+            \item \textbf{Web server:} Thư mục mã nguồn nên để 755 (Owner full quyền, Others chỉ đọc/execute); file script nên để 644 (Owner đọc/ghi, Others chỉ đọc).
+            \item \textbf{Cơ sở dữ liệu:} File cấu hình chứa mật khẩu nên để 600 (chỉ Owner đọc/ghi); thư mục dữ liệu chỉ cấp quyền cho user chạy DB, Others không truy cập.
+            \item \textbf{Tệp hệ thống:} Chỉ root có quyền ghi, các user khác chỉ được phép đọc khi cần thiết.
+        \end{itemize}
+        \item Ví dụ lệnh an toàn:
+        \begin{verbatim}
+    # Thiết lập quyền an toàn cho web server
+    chown www-data:www-data /var/www/html -R
+    chmod 755 /var/www/html
+    chmod 644 /var/www/html/index.php
+
+    # Thiết lập quyền cho file cấu hình database
+    chown mysql:mysql /etc/mysql/my.cnf
+    chmod 600 /etc/mysql/my.cnf
+        \end{verbatim}
+    \end{itemize}
+
+    \item \textbf{Kết luận:}
+    \begin{itemize}
+        \item Quyền 777 cực kỳ nguy hiểm cho các dịch vụ quan trọng như web, database và hệ thống.
+        \item Thực tế cần cân nhắc kỹ quyền theo từng user và dịch vụ, vừa đảm bảo hoạt động vừa tăng cường bảo mật.
+        \item Áp dụng nguyên tắc quyền tối thiểu cần thiết, kết hợp kiểm tra và audit định kỳ, là cách bảo vệ hệ thống hiệu quả nhất.
+    \end{itemize}
+\end{itemize}
+
+
+
+
+\subsection{Tìm hiểu về Makefile trong quá trình biên dịch chương trình}
+
+\subsubsection*{Câu 1:\\
+Lợi ích của Makefile? Hãy đưa ra ví dụ minh họa}
+$\indent$\underline{\textbf{\textit{Trả lời:}}}
+\begin{itemize}
+    \item \textbf{Makefile là gì?}
+    \begin{itemize}
+        \item Makefile là một tập tin hướng dẫn công cụ \texttt{make} cách biên dịch và liên kết chương trình từ các file nguồn.
+        \item Thay vì gõ nhiều lệnh biên dịch thủ công, Makefile giúp \textbf{tự động hóa toàn bộ quá trình}, đặc biệt hữu ích với các dự án có nhiều file nguồn.
+        \item Makefile cũng xác định phụ thuộc giữa các file (.c, .o), nên chỉ biên dịch những file thay đổi, giúp tiết kiệm thời gian và công sức.
+    \end{itemize}
+
+    \item \textbf{Lợi ích của Makefile}
+    \begin{itemize}
+        \item \textbf{Tự động hóa quá trình biên dịch:}
+        \begin{itemize}
+            \item Khi một file nguồn thay đổi, Makefile chỉ biên dịch \textbf{file đó và các file phụ thuộc}, không cần biên dịch lại toàn bộ dự án.
+            \item Giúp tiết kiệm thời gian, đặc biệt với dự án lớn có nhiều file.
+        \end{itemize}
+
+        \item \textbf{Quản lý phụ thuộc giữa các file:}
+        \begin{itemize}
+            \item Makefile xác địnhnmối quan hệ giữa file nguồn (.c) và file đích (.o hoặc executable).
+            \item Tránh lỗi do thiếu file hoặc biên dịch nhầm thứ tự, đảm bảo chương trình luôn được build đúng.
+        \end{itemize}
+
+        \item \textbf{Dễ bảo trì và mở rộng:}
+        \begin{itemize}
+            \item Trong các dự án nhiều file, Makefile giúp tập trung các lệnh build, liên kết và dọn dẹp (clean) trong một tập tin duy nhất.
+            \item Khi thêm file mới hoặc thay đổi cấu trúc dự án, chỉ cần sửa Makefile, không phải nhớ từng lệnh biên dịch thủ công.
+        \end{itemize}
+
+        \item \textbf{Tiết kiệm thời gian và giảm lỗi:}
+        \begin{itemize}
+            \item Chỉ biên dịch những file thay đổi → \textbf{tiết kiệm thời gian build}.
+            \item Không cần gõ nhiều lệnh gcc/clang thủ công → \textbf{giảm nguy cơ sai sót}.
+        \end{itemize}
+    \end{itemize}
+
+    \item \textbf{Ví dụ minh họa Makefile}
+
+\textbf{Cấu trúc dự án game nhỏ:}
+    \begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Game, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+\begin{verbatim}
+    game/
+    |-- main.c        # file chính
+    |-- player.c      # các hàm liên quan đến nhân vật
+      | player.h
+    |-- enemy.c       # các hàm liên quan đến kẻ thù
+      | enemy.h
+    |-- Makefile
+\end{verbatim}
+   \end{tcolorbox}
+\textbf{Nội dung Makefile:}
+\begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Makefile, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+\begin{verbatim}
+# Compiler và flags
+CC = gcc
+CFLAGS = -Wall -g
+
+# Object files và executable
+OBJ = main.o player.o enemy.o
+TARGET = game
+
+# Rule tạo executable từ các object
+$(TARGET): $(OBJ)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ)
+
+# Rule tạo file .o từ file .c
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Rule dọn dẹp file tạm
+clean:
+	rm -f $(OBJ) $(TARGET)
+\end{verbatim}
+   \end{tcolorbox}
+\textbf{Lợi ích của Makefile dựa trên ví dụ:}
+\begin{itemize}
+    \item \textbf{Tự động hóa quá trình biên dịch:}
+    \begin{itemize}
+        \item Khi thay đổi \texttt{player.c}, Makefile chỉ biên dịch \texttt{player.o} và liên kết lại chương trình \texttt{game}.
+        \item Không cần biên dịch lại \texttt{main.o} hay \texttt{enemy.o}, giúp tiết kiệm thời gian.
+    \end{itemize}
+
+    \item \textbf{Quản lý phụ thuộc giữa các file:}
+    \begin{itemize}
+        \item Makefile xác định \texttt{game} phụ thuộc vào \texttt{main.o}, \texttt{player.o}, \texttt{enemy.o}.
+        \item Make tự động kiểm tra file nào thay đổi và build đúng thứ tự, tránh lỗi build nhầm hoặc thiếu file.
+    \end{itemize}
+
+    \item \textbf{Dễ bảo trì và mở rộng:}
+    \begin{itemize}
+        \item Khi thêm file mới, ví dụ \texttt{level.c}, chỉ cần thêm vào biến \texttt{OBJ} trong Makefile.
+        \item Rules \texttt{\%.o: \%.c} và \texttt{clean} vẫn hoạt động bình thường, không cần viết lại từng lệnh biên dịch.
+    \end{itemize}
+
+    \item \textbf{Tiết kiệm thời gian và giảm lỗi:}
+    \begin{itemize}
+        \item Chỉ biên dịch những file thay đổi → giảm thời gian build.
+        \item Không cần gõ thủ công nhiều lệnh gcc → giảm nguy cơ sai sót.
+    \end{itemize}
+
+    \item \textbf{Dọn dẹp dễ dàng:}
+    \begin{itemize}
+        \item Rule \texttt{clean} xóa các file tạm (\texttt{.o}) và executable (\texttt{game}).
+        \item Giúp build lại từ đầu khi cần, đảm bảo môi trường biên dịch luôn sạch sẽ.
+    \end{itemize}
+\end{itemize}
+
+
+
+    
+\end{itemize}
+
+\subsubsection*{Câu 2:\\
+Tại sao lần biên dịch đầu tiên thường mất nhiều thời gian hơn so với các lần biên dịch tiếp theo?}
+$\indent$\underline{\textbf{\textit{Trả lời:}}}
+\begin{itemize}
+    \item \textbf{Lần biên dịch đầu tiên:}
+    \begin{itemize}
+        \item Khi chạy \texttt{makefile} lần đầu, hầu hết các file object (.o) và executable chưa tồn tại trên hệ thống. Makefile phải biên dịch tất cả các file nguồn (.c) thành các file object (.o).
+        \item Sau khi biên dịch xong các file object, Makefile liên kết tất cả các object để tạo ra chương trình thực thi (executable).
+        \item Toàn bộ quá trình này tốn nhiều thời gian vì mỗi file phải build từ đầu và không có file object nào để tái sử dụng.
+    \end{itemize}
+
+    \item \textbf{Các lần biên dịch tiếp theo:}
+    \begin{itemize}
+        \item Makefile kiểm tra thời gian sửa đổi (timestamp) của từng file nguồn so với file object tương ứng.
+        \item Nếu file nguồn không thay đổi, file object vẫn còn mới hơn → Make bỏ qua việc biên dịch file đó.
+        \item Nếu file nguồn thay đổi, Make chỉ biên dịch file đó và sau đó liên kết lại toàn bộ chương trình.
+        \item Những file không thay đổi không phải biên dịch lại, giúp tiết kiệm đáng kể thời gian và tài nguyên.
+    \end{itemize}
+
+    \item \textbf{Tóm Lại:}
+    \begin{itemize}
+        \item Lần biên dịch đầu tiên lâu vì phải xây dựng toàn bộ từ file nguồn, không có dữ liệu trung gian.
+        \item Các lần biên dịch tiếp theo nhanh hơn nhờ cơ chế incremental build, chỉ biên dịch những file thay đổi và liên kết lại chương trình.
+        \item Cơ chế này tiết kiệm thời gian, giảm công sức, hạn chế sai sót so với việc biên dịch thủ công từng file.
+    \end{itemize}
+\end{itemize}
+
+
+\subsubsection*{Câu 3:\\
+Makefile có cơ chế hỗ trợ cho các ngôn ngữ lập trình khác không? Nếu có, hãy cho ví dụ}
+$\indent$\underline{\textbf{\textit{Trả lời:}}}\\
+$\indent$Makefile không giới hạn chỉ sử dụng với ngôn ngữ C/C++ mà còn có thể áp dụng với nhiều ngôn ngữ khác như Python, Java, Rust, Go,... Bản chất của Makefile là xác định \textbf{dependencies} giữa các file và lệnh thực thi, do đó có thể dùng để tự động hóa việc build, test hoặc chạy chương trình trong bất kỳ ngôn ngữ nào có lệnh dòng lệnh.
+
+\subsection*{Ví dụ 1: C++}
+Giả sử dự án C++ gồm các file:
+\begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Game, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+\begin{verbatim}
+  game/
+    |-- main.cpp
+    |-- player.cpp
+    |-- player.h
+    |-- enemy.cpp
+    |-- enemy.h
+\end{verbatim}
+\end{tcolorbox}
+Một Makefile đơn giản có thể như sau:
+\begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Danh sách file, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+\begin{verbatim}
+# Compiler và flags
+CXX = g++
+CXXFLAGS = -Wall -g
+
+# Object files và executable
+OBJ = main.o player.o enemy.o
+TARGET = game
+
+# Rule tạo executable từ các object
+$(TARGET): $(OBJ)
+    $(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJ)
+
+# Rule tạo file .o từ file .cpp
+%.o: %.cpp
+    $(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Rule dọn dẹp
+clean:
+    rm -f $(OBJ) $(TARGET)
+\end{verbatim}
+\end{tcolorbox}
+\textbf{Giải thích:}
+\begin{itemize}
+    \item Lần biên dịch đầu tiên sẽ build tất cả file \texttt{.cpp} thành object và liên kết thành \texttt{game}.
+    \item Các lần biên dịch tiếp theo chỉ biên dịch những file thay đổi, tiết kiệm thời gian nhờ cơ chế incremental build.
+\end{itemize}
+
+\subsection*{Ví dụ 2: Python}
+
+Python không cần biên dịch, nhưng Makefile vẫn hữu ích để tự động hóa chạy script, kiểm tra style code và dọn dẹp môi trường.
+\begin{tcolorbox}[colback=white!95!gray, colframe=black, 
+                  title=Makefile, 
+                  sharp corners, 
+                  boxrule=0.5mm, 
+                  breakable]
+\begin{verbatim}
+# Rule chạy chương trình Python
+run:
+    python3 main.py
+
+# Rule kiểm tra style code
+lint:
+    flake8 src/
+
+# Rule dọn dẹp file cache
+clean:
+    rm -rf __pycache__ *.pyc
+\end{verbatim}
+\end{tcolorbox}
+
+\textbf{Giải thích:}
+\begin{itemize}
+    \item Makefile giúp tự động hóa các tác vụ thường dùng, như chạy chương trình (\texttt{make run}), kiểm tra style (\texttt{make lint}) và dọn dẹp cache (\texttt{make clean}).
+    \item Cơ chế dependencies vẫn có thể áp dụng nếu cần build các file trung gian hoặc tạo output từ nhiều script.
+\end{itemize}
+
+
+\newpage
+
+\section{Kết quả thực hành 2 Bài Tập}
+
+\subsubsection{Thực thi Bài tập 3.6}
+
+$\indent$Đoạn code dưới đây triển khai một máy tính dòng lệnh nâng cao theo yêu cầu của bài Lab cho phép thực hiện các phép toán nhị phân và lưu trữ kết quả trước đó để tái sử dụng.
+
+Máy tính này cho phép người dùng nhập trực tiếp các phép toán nhị phân theo định dạng \texttt{<số> <toán\_tử> <số>}, hỗ trợ năm phép toán cơ bản: Cộng, Trừ, Nhân, Chia và Chia lấy dư (Modulo).
+Kết quả của phép tính trước đó được lưu trong biến đặc biệt \texttt{ANS} và có thể sử dụng lại trong các phép tính tiếp theo.
+
+Mã nguồn của chương trình máy tính dòng lệnh nâng cao có thể tham khảo tại: \href{https://github.com/vophamk23/Microprocessor_Microcontroller_HCMUT/tree/main/STM32%20LAB%202%20-%20TIMER%20INTERRUPT%20and%20LED%20SCANNING/EX1_Two7SEG_Display}{calc.sh}\label{link:proteus_repo}
+\begin{lstlisting}[language=bash, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt, caption=Code in the calc.sh file]
+    #!/bin/bash
+    #=========================================================
+    # CALCULATOR - Simple Command Line Calculator
+    # Supports: +, -, x, /, % and keeps calculation history
+    #=========================================================
+    #---------------------------------------------------------
+    # BLOCK 1: INITIALIZATION
+    #--------------------------------------------------------
+    # File path to store the result of the previous calculation 
+    ANS_FILE=~/.calc_ans
+    # File path to store the history of the last 5 calculations
+    HISTORY_FILE=~/.calc_history
+    # Create ANS file if it doesn't exist, initialize with 0
+    if [ ! -f "$ANS_FILE" ]; then
+        echo "0" > "$ANS_FILE"
+    fi
+    # Create history file if it doesn't exist
+    if [ ! -f "$HISTORY_FILE" ]; then
+        touch "$HISTORY_FILE"
+    fi
+    # Clear the screen to start the program
+    clear
+    #---------------------------------------------------------
+    # BLOCK 2: MAIN LOOP
+    #---------------------------------------------------------
+    # Infinite loop to continuously receive user input
+    while true; do
+        # Display the prompt ">>" and wait for user input
+        printf ">> "
+        read -r input
+        #-----------------------------------------------------
+        # BLOCK 3: SPECIAL COMMAND HANDLING
+        #---------------------------------------------------------
+        # EXIT command: exit the program
+        if [ "$input" = "EXIT" ]; then
+            break
+        fi
+        # HIST command: display the last 5 calculations
+        if [ "$input" = "HIST" ]; then
+            cat "$HISTORY_FILE"
+            echo ""
+            echo "Press any key to continue..."
+            read -n 1 -s -r
+            clear
+            continue
+        fi
+        # ANS command: display the previous result
+        if [ "$input" = "ANS" ]; then
+            cat "$ANS_FILE"
+            echo ""
+            echo "Press any key to continue..."
+            read -n 1 -s -r
+            clear
+            continue
+        fi
+        #--------------------------------------------------------
+        # BLOCK 4: INPUT PARSING AND VALIDATION
+        #-----------------------------------------------------
+        # Split the input into 3 parts: num1 operator num2
+        read -r num1 operator num2 <<< "$input"
+        # Replace keyword 'ANS' with the previous calculation result 
+        if [ "$num1" = "ANS" ]; then
+            num1=$(cat "$ANS_FILE")
+        fi
+        if [ "$num2" = "ANS" ]; then
+            num2=$(cat "$ANS_FILE")
+        fi
+        # Check if all 3 parts are entered, otherwise  syntax error
+        if [ -z "$num1" ] || [ -z "$operator" ] || [ -z "$num2" ];        then
+            echo "SYNTAX ERROR"
+            echo "Press any key to continue..."
+            read -n 1 -s -r
+            clear
+            continue
+        fi
+        # Check if operator is valid (+, -, x, /, %)
+        case "$operator" in
+            "+"|"-"|"/"|"%"|"x")
+                # Valid operator, continue
+                ;;
+            *)
+                # Invalid operator
+                echo "SYNTAX ERROR"
+                echo "Press any key to continue..."
+                read -n 1 -s -r
+                clear
+                continue
+                ;;
+        esac
+
+        #-----------------------------------------------------
+        # BLOCK 5: CALCULATION
+        #---------------------------------------------------------
+        # Check division by zero (for / and %)
+        if ([ "$operator" = "/" ] || [ "$operator" = "%" ]) && [ "$num2" = "0" ]; then
+            echo "MATH ERROR"
+            echo "Press any key to continue..."
+            read -n 1 -s -r
+            clear
+            continue
+        fi
+        # Convert 'x' to '*' so bc can recognize it
+        calc_operator="$operator"
+        if [ "$operator" = "x" ]; then
+            calc_operator="*"
+        fi
+        # Perform the calculation using bc
+        if [ "$operator" = "%" ]; then
+        # Modulus operation, integer result only
+        result=$(echo "scale=0; $num1 $calc_operator $num2" | bc -l)
+        else
+        raw_result=$(echo "scale=10; 
+                $num1 $calc_operator $num2" | bc -l)
+        # Round to 2 decimal places
+        result=$(printf "%.2f" "$raw_result")
+        fi
+        
+        #-----------------------------------------------------
+        # BLOCK 6: DISPLAY AND STORE RESULT
+        #---------------------------------------------------------
+        # Print the result to the screen
+        echo "$result"
+        # Save the result to the ANS file for later use
+        echo "$result" > "$ANS_FILE"
+        # Create a history entry in the format
+        history_entry="$input = $result"
+        # Update history file (keep only last 5 entries)
+        echo "$history_entry" > history.tmp
+        cat "$HISTORY_FILE" >> history.tmp
+        head -n 5 history.tmp > "$HISTORY_FILE"
+        rm history.tmp
+
+
+
+        #---------------------------------------------------------
+        # BLOCK 7: WAIT FOR USER AND CLEAR SCREEN
+        #-----------------------------------------------------
+        # Notify and wait for user to press any key
+        echo ""
+        echo "Press any key to continue..."
+        read -n 1 -s -r
+        
+        # Clear the screen to prepare for next calculation
+        clear
+    done
+
+\end{lstlisting}
+
+
+
+\textbf{\textit{* Kết quả thực thi và minh họa đầu ra}}\\
+$\indent$Trong phần này, chúng tôi trình bày kết quả đầu ra của chương trình \texttt{calc.sh} khi thực hiện các phép tính cơ bản bao gồm: phép cộng, phép trừ, phép nhân, phép chia và phép chia lấy dư (modulo).
+
+Mỗi ví dụ minh họa cho cách chương trình xử lý dữ liệu đầu vào và hiển thị kết quả tương ứng, qua đó thể hiện tính chính xác và khả năng vận hành ổn định của chương trình.
+\begin{itemize}
+    \item \textbf{Phép cộng (+):}\\ Kết quả thực hiện phép cộng hai số được minh họa như hình dưới đây.
+    \begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.51\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/1A.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.47\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/1B.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 0}
+\end{figure}
+
+
+\item \textbf{Phép trừ (-):}\\
+Ví dụ về phép trừ giữa hai số được thể hiện trong hình sau.
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/2A.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/2B.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 1}
+\end{figure}
+\newpage
+\item \textbf{Phép nhân (x):}\\
+Kết quả của phép nhân được thể hiện ở hình minh họa bên dưới.
+
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.51\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/3A.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.47\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/3b.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 2}
+\end{figure}
+
+
+\item \textbf{Phép chia (/):}\\
+Kết quả của phép chia hai số với phần thập phân được làm tròn đến hai chữ số.
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.485\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/4A.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/4B.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 3}
+\end{figure}
+
+\item \textbf{Phép chia lấy dư (\%):}\\
+Ví dụ về phép chia lấy dư được trình bày ở hình dưới đây.
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/5A.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/5B.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 4}
+\end{figure}
+
+\item \textbf{Lỗi chia cho 0 (Math Error) và cú pháp nhập sai (Syntax Error):}
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.51\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/6.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/8.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 5}
+\end{figure}
+
+\item \textbf{Thoát khỏi chương trình (Exit Command):}
+
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=0.7\textwidth]{picture/7.png}
+    \caption{Các kết quả kiểm thử cho Testcase 6}
+\end{figure}
+
+
+
+\item \textbf{Hiển thị lịch sử 5 phép tính gần nhất (Lệnh HIST):}\\
+Trong chương trình \texttt{calc.sh}, người dùng có thể xem lại lịch sử của 5 phép tính gần nhất thông qua lệnh \texttt{HIST}.  
+Đặc biệt, chương trình hỗ trợ biến \texttt{ANS}, cho phép lưu trữ kết quả của phép tính cuối cùng để sử dụng lại ở các phép tính tiếp theo.  
+Nhờ đó, người dùng có thể thực hiện chuỗi phép toán liên tiếp mà không cần nhập lại toàn bộ giá trị trước đó, giúp thao tác nhanh và linh hoạt hơn.
+
+
+
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/9A_HIST1.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/9B_HIST2.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 7 - 8}
+\end{figure}
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/9C_HIST3.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/9D_HIST4.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 9 - 10}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/9E_HIST.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/9F_HIST.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 11 - 12}
+\end{figure}
+\end{itemize}
+
+\newpage
+
+\subsubsection{Thực thi Bài tập 5.3}
+Triển khai lại calculator từ Shell Script sang C, với các yêu cầu:
+
+\begin{itemize}
+    \item \textbf{Makefile}: tạo \texttt{calc}, có hai target \texttt{all} và \texttt{clean}.
+    \item \textbf{Chương trình C}:
+    \begin{itemize}
+        \item Main: \texttt{calc.c} (nhập/xuất, gọi hàm tính toán)
+        \item Logic: các file C riêng (ví dụ \texttt{operations.c}) (+, -, *, /)
+        \item Không cần chức năng \texttt{HIST}
+    \end{itemize}
+    \item \textbf{Input/Output}: giống Shell Script, có thể đọc từ bàn phím hoặc \texttt{input.txt}.
+    \item \textbf{Executable}: \texttt{calc} (Windows: \texttt{calc.exe}).
+    \end{itemize}
+    \textbf{\textit{* Kết quả thực thi và minh họa đầu ra}}
+
+    
+    \begin{itemize}
+    \item \textbf{Testcase 1:}\\ Kết quả thực hiện phép tính hai số được minh họa như hình dưới đây.
+    \begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.46\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/1Ah.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.52\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/1Bh.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 1}
+\end{figure}
+
+
+\item \textbf{Testcase 2:}\\
+Kết quả thực hiện phép tính hai số được minh họa như hình dưới đây.
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/2Ah.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/2Bh.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 2}
+\end{figure}
+
+
+\item \textbf{Testcase 3:}\\
+Kết quả thực hiện phép tính hai số được minh họa như hình dưới đây.
+
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.51\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/3Ah.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.47\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/3Bh.png}
+    \end{minipage}
+    \vspace{0.51cm}
+    \caption{Các kết quả kiểm thử cho Testcase 3}
+\end{figure}
+
+
+\item \textbf{Testcase 4:}\\
+Kết quả thực hiện phép tính hai số được minh họa như hình dưới đây.
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.485\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/4Ah.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/4Bh.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 4}
+\end{figure}
+
+\newpage
+\item \textbf{Testcase 5:}\\
+Kết quả thực hiện phép tính hai số được minh họa như hình dưới đây.
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/5Ah.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/5Bh.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 5}
+\end{figure}
+\item \textbf{Testcase 6:}\\
+Kết quả thực hiện phép tính hai số được minh họa như hình dưới đây.
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.55\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/9H.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.55\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/9H1.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.55\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/9H2.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.55\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/9H3.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 6}
+\end{figure}
+
+
+
+
+\item \textbf{Testcase 6:}
+\\
+Lỗi chia cho 0 (Math Error) và cú pháp nhập sai (Syntax Error)
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.51\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/6Ah.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{picture/6Bh.png}
+    \end{minipage}
+    \vspace{0.5cm}
+    \caption{Các kết quả kiểm thử cho Testcase 7}
+\end{figure}
+
+\item \textbf{Testcase 7:}\\
+Thoát khỏi chương trình (Exit Command)
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=0.8\textwidth]{picture/6Ch.png}
+    \caption{Các kết quả kiểm thử cho Testcase 8}
+\end{figure}
+
+\item \textbf{Kết quả thực thi lệnh \texttt{make all} và \texttt{make clean}}\\
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=0.8\textwidth]{picture/8h.png}
+    \caption{Các kết quả kiểm thử cho Testcase 9}
+\end{figure}
+
+\\
+Hình minh họa quá trình biên dịch và làm sạch chương trình bằng Makefile. 
+Ban đầu, trong thư mục chỉ có các tệp mã nguồn gồm \texttt{calc.c}, \texttt{operations.c}, \texttt{operations.h} và tệp \texttt{Makefile}.
+
+Khi thực hiện lệnh \texttt{make all}, Makefile tiến hành biên dịch toàn bộ chương trình. 
+Trên màn hình hiển thị các dòng lệnh cho thấy quá trình biên dịch từng tệp mã nguồn riêng lẻ, 
+sau đó liên kết chúng lại để tạo ra tệp thực thi có tên \texttt{calc}. 
+Sau khi hoàn tất, trong thư mục xuất hiện thêm các tệp trung gian \texttt{.o} và tệp thực thi \texttt{calc}, 
+chứng tỏ chương trình đã được biên dịch thành công.
+
+Tiếp đó, khi chạy lệnh \texttt{make clean}, Makefile thực hiện chức năng dọn dẹp - 
+xóa các tệp được tạo ra trong quá trình biên dịch trước đó. 
+Kết quả là thư mục trở lại trạng thái ban đầu, chỉ còn lại các tệp mã nguồn và tệp \texttt{Makefile}.
+
+
+\end{itemize}

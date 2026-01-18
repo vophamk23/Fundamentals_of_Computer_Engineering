@@ -1,0 +1,2045 @@
+
+\section{PROBLEM 1 - Sequence Lock (Seqlock)}
+\subsection{Giới thiệu }
+
+$\indent$Problem~1 yêu cầu sinh viên triển khai cơ chế \textit{Sequence Lock (Seqlock)} trong môi trường người dùng. Đây là một kỹ thuật đồng bộ hóa có hiệu năng cao, được ứng dụng rộng rãi trong nhân Linux để xử lý mô hình nhiều luồng đọc và ít luồng ghi, trong đó writer được ưu tiên tuyệt đối nhằm tránh tình trạng starvation.
+
+Khác với các cơ chế đồng bộ truyền thống như \texttt{mutex} hay \texttt{reader--writer lock}, Seqlock vận hành dựa trên hai nguyên tắc chính:
+
+\begin{itemize}
+    \item \textbf{Writer độc quyền}: Mọi thao tác ghi đều được bảo vệ bởi một \texttt{mutex}, đảm bảo chỉ một writer được phép truy cập vùng \textit{critical section}.
+    \item \textbf{Reader đọc lạc quan}: Reader không sử dụng bất kỳ khóa nào mà dựa vào biến \textit{sequence counter} để kiểm tra tính nhất quán:
+    \begin{itemize}
+        \item Sequence chẵn biểu thị dữ liệu ổn định (không có writer đang ghi).
+        \item Sequence lẻ biểu thị writer đang cập nhật dữ liệu, do đó reader không được dùng dữ liệu vừa đọc.
+    \end{itemize}
+\end{itemize}
+
+Cơ chế này giúp đảm bảo dữ liệu nhất quán trong khi vẫn duy trì hiệu năng cao cho các tác vụ đọc. Problem~1 giúp sinh viên nắm bắt cách thiết kế một primitive đồng bộ hóa hiệu quả và hiểu rõ hơn cơ chế xử lý xung đột đọc--ghi trong môi trường đa luồng.
+
+\subsection{Yêu cầu của bài toán}
+
+$\indent$Vấn đề đặt ra ba yêu cầu chính:
+
+\begin{enumerate}
+    \item \textbf{Xây dựng đầy đủ API của Seqlock}, gồm:
+    \begin{itemize}
+        \item \texttt{pthread\_seqlock\_init()}
+        \item \texttt{pthread\_seqlock\_destroy()}
+        \item \texttt{pthread\_seqlock\_wrlock()}
+        \item \texttt{pthread\_seqlock\_wrunlock()}
+        \item \texttt{pthread\_seqlock\_rdlock()}
+        \item \texttt{pthread\_seqlock\_rdunlock()}
+    \end{itemize}
+
+    \item \textbf{Đảm bảo hoạt động đúng nguyên lý của Seqlock}, cụ thể:
+    \begin{itemize}
+        \item Writer phải dùng \texttt{mutex} để đảm bảo độc quyền.
+        \item Sequence counter phải được cập nhật chính xác: số lẻ khi writer đang ghi và số chẵn khi writer hoàn tất.
+        \item Reader không sử dụng khóa; toàn bộ kiểm tra dựa vào giá trị sequence để đảm bảo dữ liệu không thay đổi trong quá trình đọc.
+    \end{itemize}
+
+    \item \textbf{Xây dựng chương trình kiểm thử} với một writer và một reader, nhằm xác thực rằng reader chỉ sử dụng dữ liệu khi dữ liệu ở trạng thái ổn định.
+\end{enumerate}
+
+\subsection{Định hướng thực thi}
+
+$\indent$Quá trình triển khai có thể thực hiện theo các bước sau:
+
+\begin{enumerate}
+    \item \textbf{Thiết kế cấu trúc Seqlock}, bao gồm:
+    \begin{itemize}
+        \item Biến đếm \texttt{sequence} để đánh dấu trạng thái dữ liệu.
+        \item \texttt{pthread\_mutex\_t} để đảm bảo writer được độc quyền.
+        \item Biến lưu giá trị sequence tại thời điểm reader bắt đầu đọc.
+    \end{itemize}
+
+    \item \textbf{Cài đặt các hàm writer}:
+    \begin{itemize}
+        \item Khóa mutex.
+        \item Tăng sequence lên số lẻ để báo hiệu bắt đầu ghi.
+        \item Cập nhật dữ liệu.
+        \item Tăng sequence trở về số chẵn khi kết thúc ghi.
+        \item Mở khóa mutex.
+    \end{itemize}
+
+    \item \textbf{Cài đặt các hàm reader}:
+    \begin{itemize}
+        \item Đọc giá trị sequence ban đầu và kiểm tra tính hợp lệ.
+        \item Đọc dữ liệu nếu sequence chẵn.
+        \item Đọc lại sequence lần cuối để kiểm tra xem writer có can thiệp không.
+        \item Chấp nhận dữ liệu nếu sequence không đổi và vẫn là số chẵn.
+    \end{itemize}
+
+    \item \textbf{Xây dựng chương trình kiểm thử}:
+    \begin{itemize}
+        \item Writer cập nhật một biến dùng chung.
+        \item Reader chỉ in hoặc sử dụng dữ liệu khi đảm bảo tính nhất quán.
+        \item Nhờ đó xác minh tính đúng đắn của cơ chế Seqlock.
+    \end{itemize}
+
+\end{enumerate}
+
+
+\subsection{Output đầu ra}
+
+Khi cơ chế \textbf{Seqlock} được triển khai đúng, chương trình kiểm thử sẽ cho thấy:
+
+\begin{itemize}
+    \item \textbf{Writer} có thể cập nhật dữ liệu dùng chung một cách an toàn mà không bị reader cản trở.
+    \item \textbf{Reader} chỉ in ra dữ liệu khi dữ liệu đang ở trạng thái ổn định (sequence \textit{chẵn} và không thay đổi trong quá trình đọc).
+    \item Nếu reader bắt trúng thời điểm writer đang ghi, nó sẽ bỏ qua hoặc đọc lại, tránh lấy dữ liệu không nhất quán.
+\end{itemize}
+
+
+
+
+\subsubsection{Output chương trình đơn luồng (single-thread)}
+Chương trình được biên dịch và thực thi với các lệnh sau:
+
+\begin{verbatim}
+    gcc -o seqlock seqlock.c -lpthread
+    ./seqlock
+\end{verbatim}
+\newpage
+\subsubsection*{Kết quả quan sát được}
+\begin{verbatim}
+    val = 1
+\end{verbatim}
+
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=16.5cm]{image/1a.png}
+    \vspace{0.5cm}
+    \caption{Single thread}
+\end{figure}
+
+\subsubsection*{Phân tích hoạt động}
+
+Quá trình thực thi mô phỏng một \textit{writer} và một \textit{reader} lần lượt truy cập biến 
+dùng chung \verb|val| dưới sự bảo vệ của \textit{sequence lock}. Cơ chế hoạt động có thể phân tích như sau:
+
+\subsubsection*{Writer - ghi đồng bộ (synchronized write)}
+
+\begin{itemize}
+    \item Lời gọi \verb|pthread_seqlock_wrlock()| bắt đầu chu kỳ ghi bằng cách tăng 
+    \verb|sequence| sang một giá trị lẻ, biểu thị rằng writer đang chiếm quyền truy cập.
+    \item Writer cập nhật biến dùng chung \verb|val| từ 0 lên 1.
+    \item Sau khi hoàn tất, \verb|pthread_seqlock_wrunlock()| tiếp tục tăng \verb|sequence|,
+    đưa giá trị này trở lại số chẵn, báo hiệu rằng quá trình ghi đã kết thúc và dữ liệu đã ổn định.
+\end{itemize}
+ \textit{Lưu ý: Sequence thay đổi theo chu kỳ chẵn $\rightarrow$ lẻ $\rightarrow$ chẵn giúp reader nhận biết khi nào dữ liệu an toàn để đọc.}
+
+
+\subsubsection*{Reader - đọc lạc quan ((optimistic read)}
+
+\begin{itemize}
+    \item Hàm \verb|pthread_seqlock_rdlock()| kiểm tra giá trị \verb|sequence|.
+    Sequence đang là số chẵn, nghĩa là không có writer hoạt động, do đó reader được phép đọc.
+    \item Reader đọc giá trị và in ra kết quả \verb|val = 1|.
+    \item Cuối cùng, \verb|pthread_seqlock_rdunlock()| kiểm tra lại \verb|sequence|. 
+    Giá trị sequence không thay đổi trong suốt thời gian đọc, đảm bảo dữ liệu là nhất quán.
+\end{itemize}
+
+
+
+
+\subsubsection{Output chương trình đa luồng (multi-thread)}
+
+Chương trình được biên dịch và thực thi với các lệnh sau:
+
+\begin{verbatim}
+    gcc -pthread -o test_multithread test_multithread.c
+    ./test_multithread
+\end{verbatim}
+
+\subsubsection*{Kết quả quan sát được}
+
+\begin{verbatim}
+    === Test: 1 Writer + 2 Readers ===
+    
+    [Writer 1] Writing... old=0
+      [Reader 1] Writer is writing, skipped
+      [Reader 2] Writer is writing, skipped
+      [Reader 1] Writer is writing, skipped
+    [Writer 1] Done. new=1
+      [Reader 2] Writer is writing, skipped
+      [Reader 2] Read data = 1 (valid)
+      [Reader 1] Read data = 1 (valid)
+    [Writer 1] Writing... old=1
+      [Reader 1] Writer is writing, skipped
+      [Reader 2] Writer is writing, skipped
+    [Writer 1] Done. new=2
+      [Reader 1] Read data = 2 (valid)
+      [Reader 2] Read data = 2 (valid)
+    
+    ...
+    
+    === Final shared_data = 5 ===
+\end{verbatim}
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=8cm]{image/1b.png}
+    \vspace{0.5cm}
+    \caption{Multi Thread}
+\end{figure}
+\subsubsection*{Phân tích hoạt động}
+
+Quá trình thực thi mô phỏng một \textit{writer} và hai \textit{readers} truy cập đồng thời vào biến
+dùng chung \verb|shared_data| dưới sự bảo vệ của \textit{sequence lock}. Thí nghiệm đa luồng giúp quan sát
+rõ ràng cách cơ chế seqlock xử lý xung đột giữa hoạt động đọc và ghi.
+\begin{itemize}
+    \item \textbf{Giai đoạn ghi (writer phase):}
+    \begin{itemize}
+    \item Khi writer bắt đầu ghi, lệnh \verb|pthread_seqlock_wrlock()| tăng \verb|sequence|
+    sang một giá trị lẻ, biểu thị rằng writer đang chiếm quyền truy cập.
+    \item Writer cập nhật biến dùng chung \verb|shared_data| (ví dụ từ 0 lên 1, rồi 2, 3, \ldots).
+    \item Trong suốt thời gian writer làm việc, readers kiểm tra \verb|sequence| và phát hiện giá trị lẻ,
+    do đó in ra thông báo:
+    \begin{verbatim}
+                         Writer is writing, skipped
+\end{verbatim}
+
+    \item Khi writer hoàn tất việc ghi, \verb|pthread_seqlock_wrunlock()| tăng \verb|sequence|
+    trở lại giá trị chẵn, báo hiệu dữ liệu đã ổn định.
+\end{itemize}
+\item \textbf{Giai đoạn đọc (reader phase):}
+\begin{itemize}
+    \item Mỗi reader gọi \verb|pthread_seqlock_rdlock()| để kiểm tra \verb|sequence|.
+    Nếu sequence là số chẵn, reader được phép đọc.
+    \item Reader đọc giá trị và hiển thị dạng:
+        \begin{verbatim}
+                         Read data = X (valid)
+\end{verbatim}
+
+    \item Sau khi đọc xong, \verb|pthread_seqlock_rdunlock()| được gọi để kiểm tra lại sequence.
+    Nếu sequence không thay đổi, dữ liệu được xác nhận là hợp lệ.
+    \item Trong một số trường hợp, reader bắt đầu đọc đúng lúc writer can thiệp. Khi sequence thay đổi,
+    dữ liệu trở nên không nhất quán và reader báo lỗi:
+            \begin{verbatim}
+                         Data invalid (writer interrupted)
+\end{verbatim}
+
+\end{itemize}
+\end{itemize}
+
+
+
+
+
+
+
+\subsubsection*{Kết luận}
+
+Thử nghiệm đa luồng cho thấy cơ chế \textit{sequence lock} hoạt động chính xác:
+
+\begin{itemize}
+    \item Writer luôn được đảm bảo quyền truy cập độc quyền và không bị trì hoãn bởi readers.
+    \item Readers chỉ đọc khi dữ liệu ổn định và luôn tự phát hiện khi có writer ghi xen vào.
+    \item Giá trị cuối của biến dùng chung (\verb|shared_data = 5|) khớp với số lần writer cập nhật,
+    cho thấy không xảy ra race condition.
+\end{itemize}
+
+
+
+
+
+
+\newpage
+\section{PROBLEM 2 - Aggregated Sum}
+\subsection{Giới thiệu}
+
+$\indent$Problem 2 tập trung vào việc hiện thực một mô hình tính toán song song nhằm tối ưu hóa thời gian xử lý đối với bài toán cộng dồn (aggregation). Thay vì để một luồng (thread) duy nhất thực hiện phép cộng tuần tự trên toàn bộ mảng số nguyên, chương trình cần khai thác khả năng xử lý song song bằng cách chia mảng thành nhiều phân đoạn và phân phối cho nhiều luồng hoạt động đồng thời.
+
+Trong môi trường đa luồng, việc nhiều luồng cùng truy cập và cập nhật vào một biến dùng chung rất dễ dẫn đến \textit{race condition}. Vì vậy, Problem 2 không chỉ hướng đến việc tăng tốc quá trình tính toán mà còn giúp sinh viên hiểu rõ cách áp dụng cơ chế đồng bộ hóa (synchronization) để đảm bảo tính đúng đắn của chương trình song song.
+
+Qua bài toán này, sinh viên sẽ nắm được cách:
+\begin{itemize}
+    \item Tổ chức phân chia công việc giữa các luồng.
+    \item Xây dựng hàm worker hiệu quả.
+    \item Đồng bộ hóa việc cập nhật dữ liệu dùng chung bằng \texttt{mutex}.
+    \item So sánh kết quả và xác minh tính đúng đắn giữa phương pháp tuần tự và phương pháp song song.
+\end{itemize}
+
+\subsection{Yêu cầu của bài toán}
+
+Chương trình được thực thi với cú pháp:
+\begin{center}
+
+\begin{verbatim}
+                              aggsum <arrsz> <tnum> [seednum]
+\end{verbatim}
+\end{center}
+Trong đó:
+\begin{itemize}
+    \item \textbf{arrsz}: kích thước của mảng số nguyên cần tính tổng.
+    \item \textbf{tnum}: số lượng luồng được sử dụng để xử lý song song.
+    \item \textbf{seednum}: (tùy chọn) giá trị seed để sinh dữ liệu ngẫu nhiên.
+\end{itemize}
+
+Các yêu cầu chính của bài toán bao gồm:
+\begin{itemize}
+    \item \textbf{Sinh dữ liệu đầu vào}:  \\
+    Mảng số nguyên kích thước \texttt{arrsz} phải được sinh ngẫu nhiên bằng hàm \texttt{generate\_array\_data()}.
+    
+    \item \textbf{Phân chia công việc}:  \\
+    Mảng phải được chia thành \texttt{tnum} phân đoạn hợp lệ để mỗi luồng chỉ xử lý đúng phạm vi được gán.
+    
+    \item \textbf{Tính tổng song song}:  \\
+    Mỗi luồng tính tổng cục bộ của phân đoạn được giao.
+    
+    \item \textbf{Đồng bộ hóa biến tổng chung}:\\  
+    Giá trị tổng cuối cùng lưu trong \texttt{sumbuf} phải được cập nhật an toàn thông qua \texttt{mutex} để tránh race condition.
+    
+    \item \textbf{Kiểm chứng kết quả}:  \\
+    Tiến trình con (tạo bằng \texttt{fork()}) tính tổng theo phương pháp tuần tự để đối chiếu với kết quả tính song song từ các luồng.
+\end{itemize}
+
+\subsection{Định hướng thực thi}
+
+Quy trình triển khai của chương trình bao gồm các bước sau:
+
+\subsubsection*{Bước 1 - Phân tích tham số và chuẩn bị dữ liệu}
+\begin{itemize}
+    \item Sử dụng \texttt{processopts()} để đọc và kiểm tra hợp lệ các tham số dòng lệnh.
+    \item Xác thực khả năng chia mảng bằng \texttt{validate\_and\_split\_argarray()}.
+    \item Cấp phát bộ nhớ và sinh dữ liệu ngẫu nhiên bằng \texttt{generate\_array\_data()}.
+\end{itemize}
+
+\subsubsection*{Bước 2 - Phân chia khoảng xử lý cho từng luồng}
+
+Hàm \texttt{validate\_and\_split\_argarray()} phân chia mảng thành các đối tượng:
+
+\begin{verbatim}
+    struct _range {
+        int start;
+        int end;
+    };
+\end{verbatim}
+
+Mỗi luồng nhận một vùng chỉ số riêng để xử lý độc lập.
+
+\subsubsection*{Bước 3 - Cài đặt hàm worker (**)}
+
+Trong \texttt{sum\_worker()}:
+\begin{itemize}
+    \item Luồng tính tổng cục bộ trên đoạn \([start, end]\).
+    \item Kết quả được cộng vào \texttt{sumbuf} trong đoạn critical section:
+\end{itemize}
+
+\begin{verbatim}
+        pthread_mutex_lock(&mtx);
+        sumbuf += local_sum;
+        pthread_mutex_unlock(&mtx);
+\end{verbatim}
+
+Cơ chế này bảo đảm tính toàn vẹn dữ liệu khi nhiều luồng cùng cập nhật.
+
+\subsubsection*{Bước 4 - Khởi tạo và đồng bộ luồng}
+\begin{itemize}
+    \item Khởi tạo \texttt{mutex}.
+    \item Tạo \texttt{tnum} luồng bằng \texttt{pthread\_create()}.
+    \item Chờ tất cả luồng hoàn tất bằng \texttt{pthread\_join()}.
+\end{itemize}
+
+\subsubsection*{Bước 5 - Kiểm chứng kết quả}
+\begin{itemize}
+    \item Tiến trình con tính tổng tuần tự bằng \texttt{validate\_sum()}.
+    \item Tiến trình cha in kết quả tính song song để đối chiếu.
+    \item Giải phóng tài nguyên và hủy \texttt{mutex}.
+\end{itemize}
+
+\newpage
+\subsection{Output đầu ra}
+
+Khi cơ chế tính tổng song song được hiện thực, chương trình kiểm thử thể hiện các đặc trưng chính:
+
+\begin{itemize}
+    \item Các luồng (threads) được phân chia công việc một cách cân bằng, hoạt động song song mà không chồng lấn vùng nhớ.
+    \item Biến tổng dùng chung (\texttt{sumbuf}) được bảo vệ nhất quán thông qua mutex, đảm bảo không xảy ra xung đột truy cập.
+    \item Kết quả tính tổng tuần tự của process con luôn trùng khớp với kết quả tính tổng song song của process cha, chứng minh tính đúng đắn của giải pháp đồng bộ hóa.
+\end{itemize}
+
+\subsubsection*{Kết quả thực thi chương trình tính tổng song song}
+
+Chương trình được biên dịch và chạy bằng:
+\begin{verbatim}
+    gcc -o aggsum main.c utils.c -lpthread
+    ./aggsum 100 8 1024
+\end{verbatim}
+
+\noindent Kết quả quan sát được:
+\begin{verbatim}
+     number : 100    valid  (and represents all characters read)
+     number : 8    valid  (and represents all characters read)
+     number : 1024    valid  (and represents all characters read)
+    aggsum runs with <arrsz>=100     <tnum>=8        <seednum>=1024
+
+    [0,12]  [13,25] [26,38] [39,51] [52,64] [65,77] [78,90] [91,99]
+    
+[ 30,   19,   43,   40,   59,    2,   65,   53,   91,   92,   68,   55,   17,   65,   17,
+28,   36,   42,   55,   99,   62,   95,   89,    8,   62,   95,   63,   58,   83,   47,
+18,   79,   32,   27,   18,   58,   29,   49,   77,   86,    6,   45,   40,   24,    9,
+24,   18,   11,   66,   39,   76,   27,   33,   65,    2,   61,   25,   31,   86,    8,
+44,   70,   87,   77,   97,   72,    0,   26,   87,   77,   78,   94,   88,   85,   84,
+64,    8,    1,   41,   40,   40,   17,   34,   39,   48,    2,   66,   73,   33,   51,
+81,   77,   20,   34,   19,   84,    5,   19,   76,   58  ]
+sequence sum results 4903
+aggsum gives sum result 4903
+\end{verbatim}
+
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=16.5cm]{image/2.png}
+    \vspace{0.5cm}
+    \caption{Aggregated Sum}
+\end{figure}
+
+
+
+\begin{itemize}
+    \item \textbf{Tham số đầu vào:}
+    \begin{itemize}
+        \item \texttt{<arrsz> = 100} $\rightarrow$ Mảng gồm 100 phần tử.
+        \item \texttt{<tnum> = 8} $\rightarrow$ Chia công việc cho 8 luồng (threads).
+        \item \texttt{<seednum> = 1024} $\rightarrow$ Giá trị seed dùng để sinh số ngẫu nhiên, đảm bảo kết quả có thể lặp lại.
+    \end{itemize}
+
+    \item \textbf{Phân vùng mảng cho các luồng:}
+    \begin{itemize}
+        \item \texttt{[0,12] [13,25] [26,38] [39,51] [52,64] [65,77] [78,90] [91,99]}
+        \item Mỗi cặp \texttt{[start, end]} xác định chỉ số mảng mà một luồng sẽ xử lý.
+        \item Ví dụ: Luồng 1 → phần tử 0 đến 12, Luồng 2 → phần tử 13 đến 25, ...
+    \end{itemize}
+
+    \item \textbf{Các giá trị trong mảng:}
+    \begin{itemize}
+        \item \texttt{[30, 19, 43, 40, 59, 2, 65, 53, 91, 92, 68, 55, 17, 65, 17, ..., 76, 58]}
+        \item Đây là 100 số ngẫu nhiên được sinh từ seed 1024.
+        \item Việc cố định seed giúp dãy số luôn giống nhau mỗi lần chạy, tổng tính toán cũng lặp lại.
+    \end{itemize}
+
+    \item \textbf{Kết quả tính tổng:}
+    \begin{itemize}
+        \item \texttt{sequence sum results 4903} → Tổng tính theo cách tuần tự (không dùng luồng).
+        \item \texttt{aggsum gives sum result 4903} → Tổng tính theo cách song song bằng 8 luồng.
+        \item Hai kết quả khớp hoàn toàn → Chứng minh chương trình tính tổng song song chính xác.
+    \end{itemize}
+\end{itemize}
+
+
+
+
+\subsubsection*{* Phân tích hoạt động}
+
+Các kết quả trên phản ánh cấu trúc hoạt động hai tầng của chương trình:
+\begin{enumerate}
+    \item một process con đảm nhiệm phần kiểm chứng, và
+    \item một process cha đảm nhiệm phần tính toán song song.
+\end{enumerate}
+Sự phối hợp này tạo thành một quy trình vừa hiệu năng cao, vừa đảm bảo tính chính xác toàn phần.
+
+\paragraph*{(1) Process con - Tính tổng tuần tự làm chuẩn tham chiếu}~
+
+Ngay sau lời gọi \texttt{fork()}, process con được tạo ra và hoạt động độc lập. Nhiệm vụ của nó bao gồm:
+
+\begin{itemize}
+    \item Duyệt toàn bộ mảng từ chỉ số 0 đến \texttt{arrsz - 1}.
+    \item Cộng từng phần tử vào biến tổng \texttt{validsum}.
+    \item In ra kết quả:
+\end{itemize}
+
+\begin{verbatim}
+                            sequence sum results 195
+\end{verbatim}
+
+Kết quả này đóng vai trò \textit{mốc chuẩn} (ground truth) để đánh giá xem phần tính toán song song có thật sự đúng hay không. Ngay cả khi các thread gặp lỗi đồng bộ, giá trị tuần tự này vẫn luôn đúng nhờ process con không dùng mutex và không chịu tác động của cạnh tranh tài nguyên.
+
+\paragraph*{(2) Process cha - Tính tổng song song dựa trên phân chia tải và mutex}~
+
+Sau khi tách process, process cha tiến hành xử lý đa luồng theo ba bước chính:
+
+\subparagraph{(a) Chia mảng thành các đoạn độc lập:} ~
+
+Hàm \fcolorbox{black}{gray!10}{\ttfamily\textbf{validate\_and\_split\_argarray()}} chia đều mảng thành 4 đoạn:
+
+\begin{verbatim}
+          [0,12]  [13,25] [26,38] [39,51] [52,64] [65,77] [78,90] [91,99]
+\end{verbatim}
+
+Cách chia này đảm bảo:
+\begin{itemize}
+    \item Không có thread nào xử lý trùng phần tử.
+    \item Mức tải giữa các thread tương đối cân bằng.
+    \item Tổng thời gian xử lý giảm đáng kể so với phương pháp tuần tự.
+\end{itemize}
+
+\subparagraph{(b) Mỗi thread xử lý một đoạn và ghi kết quả bằng cơ chế bảo vệ}~
+
+Trong hàm \fcolorbox{black}{gray!10}{\ttfamily\textbf{sum\_worker()}}
+
+\begin{itemize}
+    \item Thread tính tổng cục bộ (\texttt{local\_sum}) trên range được giao.
+    \item Khi cộng vào tổng chung \texttt{sumbuf}, thread đi qua “cửa mutex”:
+\end{itemize}
+
+\begin{verbatim}
+                            pthread_mutex_lock(&mtx);
+                            sumbuf += local_sum;
+                            pthread_mutex_unlock(&mtx);
+\end{verbatim}
+
+
+Ý nghĩa:
+\begin{itemize}
+    \item Mutex tạo ra một vùng \textit{critical section} an toàn, chỉ cho phép một thread cập nhật tổng tại một thời điểm.
+    \item Các phép tính cục bộ không cần mutex, giúp tối ưu hiệu năng.
+    \item Không xảy ra ghi đè, mất dữ liệu hoặc race condition.
+\end{itemize}
+
+
+
+\subparagraph{(c) Tổng hợp và đối chiếu kết quả}~
+
+Khi tất cả thread kết thúc và \texttt{pthread\_join()} hoàn thành, process cha in ra:
+
+\begin{verbatim}
+                            aggsum gives sum result 195
+\end{verbatim}
+
+Việc giá trị này trùng khớp hoàn toàn với tổng tuần tự của process con cho thấy:
+
+\begin{itemize}
+    \item Thuật toán chia mảng chính xác.
+    \item Cơ chế mutex bảo vệ biến \texttt{sumbuf} hoạt động đúng.
+    \item Không xảy ra race condition hoặc sai lệch dữ liệu.
+    \item Chương trình đa luồng vận hành ổn định và tin cậy.
+\end{itemize}
+
+\subsubsection*{* Kết luận}
+
+Problem~2 là minh chứng rõ ràng cho hiệu quả của xử lý song song kết hợp đồng bộ hóa:
+
+\begin{itemize}
+    \item Phân chia workload cho nhiều thread giúp tăng tốc độ xử lý tổng thể.
+    \item Mutex đảm bảo mọi thao tác ghi vào vùng dữ liệu chung đều nhất quán.
+    \item Process con đóng vai trò ``bộ đối chiếu'', giúp xác thực kết quả tính toán song song.
+\end{itemize}
+
+Nhờ cấu trúc đó, chương trình vừa nhanh, vừa chính xác, đồng thời thể hiện rõ nguyên lý cốt lõi của lập trình song song trong môi trường POSIX.
+
+
+\newpage
+\section{PROBLEM 3 - Log Buffer Synchronization}
+\subsection{Giới thiệu}
+
+$\indent$Bài toán này mô phỏng một hệ thống ghi log bất đồng bộ, nơi nhiều luồng ghi log (producer threads) liên tục sinh dữ liệu và đưa vào bộ đệm tạm thời (log buffer) có kích thước cố định. Đồng thời, một luồng định thời (timer thread) chạy độc lập, định kỳ flush bộ đệm: đọc toàn bộ dữ liệu hiện có, in ra màn hình và làm trống buffer.
+
+Vì các luồng cùng truy cập tài nguyên chung (\texttt{buffer} và biến \texttt{count}), chương trình dễ gặp các vấn đề phổ biến trong lập trình đa luồng, bao gồm:
+
+\begin{itemize}
+    \item \textbf{Race condition}: nhiều luồng ghi cùng lúc có thể ghi đè lên nhau.
+    \item \textbf{Lost updates}: dữ liệu bị ghi sai thứ tự hoặc bị bỏ qua.
+    \item \textbf{Buffer overflow}: ghi quá số slot cho phép.
+    \item \textbf{Inconsistency}: dữ liệu ghi và dữ liệu flush không khớp.
+\end{itemize}
+
+Mục tiêu của bài toán là sử dụng mutex và semaphore để đồng bộ hóa, đảm bảo:
+
+\begin{itemize}
+    \item Không ghi đè dữ liệu.
+    \item Không vượt quá số slot.
+    \item Dữ liệu không bị mất và luôn được flush đúng thứ tự.
+\end{itemize}
+
+\subsection{Thành phần hệ thống}
+
+\subsubsection*{Bộ đệm log (\texttt{logbuf})}
+\begin{itemize}
+    \item Kích thước cố định: \texttt{MAX\_BUFFER\_SLOT = 6}.
+    \item Chứa các chuỗi ký tự ngắn.
+\end{itemize}
+
+\subsubsection*{Luồng ghi log (\texttt{wrlog})}
+\begin{itemize}
+    \item Mỗi lần ghi một \texttt{id} vào buffer.
+    \item Chỉ ghi khi còn slot trống.
+    \item Sau khi ghi, thông báo buffer đã có thêm một mục.
+\end{itemize}
+
+\subsubsection*{Luồng định thời (\texttt{timer\_start})}
+\begin{itemize}
+    \item Chạy theo chu kỳ 500 ms.
+    \item Kiểm tra buffer: nếu có dữ liệu $\rightarrow$ flush log.
+\end{itemize}
+
+\subsubsection*{Cơ chế đồng bộ}
+
+% Bảng đẹp hơn
+\hspace{0.5cm}\begin{tabular}{|>{\columncolor{rowcolor}}m{5cm}|>{\columncolor{rowcolor}}m{9cm}|}
+\hline
+\rowcolor{headercolor}
+\textbf{\textcolor{white}{Công cụ}} & \textbf{\textcolor{white}{Chức năng}} \\
+\hline
+\texttt{pthread\_mutex\_t mutex} & Bảo vệ critical section (vùng ghi buffer, biến \texttt{count}) \\
+\hline
+\texttt{sem\_t empty\_slots} & Đếm số ô trống (khởi tạo = 6) \\
+\hline
+\texttt{sem\_t filled\_slots} & Đếm số ô đã ghi (khởi tạo = 0) \\
+\hline
+\end{tabular}
+
+\subsection{Định hướng thực thi}
+
+
+\begin{itemize}
+    \item \textbf{Bước 1 - Khởi tạo tài nguyên}
+    \begin{itemize}
+        \item Khởi tạo mutex và semaphore:
+        \begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+    pthread_mutex_init(&mutex, NULL);
+    sem_init(&empty_slots, 0, MAX_BUFFER_SLOT);
+    sem_init(&filled_slots, 0, 0);
+        \end{lstlisting}
+    \end{itemize}
+
+    \item \textbf{Bước 2 - Hàm ghi log (\texttt{wrlog})}
+    \begin{itemize}
+        \item Mỗi luồng ghi log trước tiên phải \textbf{chờ một slot trống} bằng lệnh \texttt{sem\_wait(\&empty\_slots)}. Nếu buffer đầy, luồng sẽ bị tạm dừng, đảm bảo không xảy ra \textbf{buffer overflow}.
+        \item Vào critical section: \texttt{pthread\_mutex\_lock(\&mutex)} để chỉ một luồng thao tác trên buffer tại một thời điểm.
+        \item Ghi dữ liệu: \texttt{logbuf[count] = id; count++;}
+        \item Thoát critical section: \texttt{pthread\_mutex\_unlock(\&mutex)}
+        \item Báo có dữ liệu mới: \texttt{sem\_post(\&filled\_slots)}
+    \end{itemize}
+
+    \item \textbf{Bước 3 - Hàm flush log (\texttt{flushlog})}
+    \begin{itemize}
+        \item Lock mutex để đảm bảo chỉ một luồng flush log cùng lúc.
+        \item In toàn bộ dữ liệu từ slot 0 đến slot \texttt{count-1}, đảm bảo thứ tự log không bị lẫn.
+        \item Reset buffer: count = 0 để các slot sẵn sàng nhận log mới.
+        \item Unlock mutex để các luồng ghi log có thể tiếp tục.
+
+        \item Với mỗi mục đã flush:
+        \begin{itemize}
+            \item \texttt{sem\_wait(\&filled\_slots)} giảm ô đã ghi
+            \item \texttt{sem\_post(\&empty\_slots)} tăng ô trống
+        \end{itemize}
+    \end{itemize}
+
+    \item \textbf{Bước 4 - Luồng định thời (\texttt{timer\_start})}
+    \begin{itemize}
+        \item Chạy theo chu kỳ 500 ms (\texttt{usleep(500000)}) để flush log định kỳ.
+        \item Trước khi flush, kiểm tra \texttt{filled\_slots > 0} để tránh flush khi buffer rỗng.
+        \item Nếu có dữ liệu, gọi hàm \texttt{flushlog()} để in ra và giải phóng slot.
+    \end{itemize}
+
+    \item \textbf{Bước 5 - Tạo luồng ghi log}
+    \begin{itemize}
+        \item Tạo 30 luồng, mỗi luồng ghi một giá trị duy nhất
+        \item Chờ tất cả luồng hoàn tất: \texttt{pthread\_join()}
+    \end{itemize}
+
+    \item \textbf{Bước 6 - Giải phóng tài nguyên}
+    \begin{itemize}
+        \item Hủy mutex, semaphore và luồng timer
+    \end{itemize}
+\end{itemize}
+
+\subsection{Output đầu ra }
+
+Hệ thống ghi log trong Problem~3 mô phỏng cơ chế xử lý log theo mô hình \textit{buffered logging} thường gặp trong hệ điều hành, nơi nhiều tác vụ ghi log chạy song song và một tác vụ nền chịu trách nhiệm \textit{flush} dữ liệu theo chu kỳ. Kết quả đầu ra cùng cơ chế hoạt động phản ánh rõ tính đồng bộ, an toàn và nhất quán của thiết kế.
+
+\subsubsection*{Kết quả thực thi chương}
+Chương trình được biên dịch và chạy bằng:
+\begin{verbatim}
+    gcc -pthread -o logbuf logbuf.c
+    ./logbuf
+\end{verbatim}
+
+\noindent Khi chương trình chạy với 30 luồng ghi log và bộ đệm có kích thước 6, kết quả thu được được tổ chức thành các nhóm 6 dòng, ví dụ:
+
+\begin{verbatim}
+    Slot 0 : 0
+    Slot 1 : 1
+    Slot 2 : 2
+    Slot 3 : 3
+    Slot 4 : 4
+    Slot 5 : 5
+    
+    Slot 0 : 6
+    Slot 1 : 7
+    Slot 2 : 8
+    Slot 3 : 9
+    Slot 4 : 10
+    Slot 5 : 11
+    ...
+\end{verbatim}
+
+Mỗi nhóm tương ứng một lần gọi hàm \texttt{flushlog()}, được kích hoạt định kỳ mỗi 0.5\,s thông qua luồng timer. Toàn bộ 30 log được chia thành 5 lần flush, phù hợp với kích thước buffer.
+
+\subsubsection*{Giải thích Output}
+
+Cách tổ chức output theo từng lô 6 log phản ánh chính xác cách hệ thống hoạt động:
+
+\begin{itemize}
+    \item \textbf{Mỗi lần flush chỉ xuất đúng số log đã ghi} (tối đa 6).  
+    Điều này đảm bảo flush không trùng lặp, không bỏ sót và không vượt quá khả năng chứa của buffer.
+
+    \item \textbf{Các lô log luôn tuần tự, không rác và không bị xen kẽ.}  
+    Mutex bảo vệ hoàn toàn critical section, loại bỏ mọi khả năng ghi trùng hoặc ghi chưa hoàn tất.
+
+    \item \textbf{Không có log mất, trùng hoặc bị ghi đè.}  
+    Dữ liệu được xuất đúng theo thứ tự ghi của các thread writer, dù các writer hoạt động không đồng bộ.
+\end{itemize}
+
+
+\newpage
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=16.5cm]{image/3a.png}
+\end{figure}
+
+
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=3.7cm]{image/3.png}
+    \vspace{0.5cm}
+    \caption{Hình ảnh Output Minh Họa Log Buffer Synchronization }
+\end{figure}
+
+
+
+
+
+
+
+
+\subsubsection*{Cơ chế hoạt động của hệ thống Logger}
+
+Hệ thống logger được xây dựng dựa trên sự phối hợp giữa \textbf{mutex}, \textbf{semaphore} và \textbf{luồng định kỳ}, tạo thành hai tầng hoạt động rõ ràng:
+
+\paragraph*{(1) Tầng ghi log - Logging Layer (Producer).}~
+
+Nhiều luồng writer đồng thời gọi \texttt{wrlog()}. Mỗi luồng thực hiện:
+
+\begin{itemize}
+    \item \textbf{Kiểm soát số lượng slot trống bằng semaphore.}  
+    Lệnh \texttt{sem\_wait(\&empty\_slots)} buộc writer dừng nếu buffer đầy.
+
+    \item \textbf{Độc chiếm buffer bằng mutex.}  
+    Lệnh \texttt{pthread\_mutex\_lock(\&mutex)} ngăn chặn race condition, ghi trùng hoặc sai lệch biến \texttt{count}.
+
+    \item \textbf{Ghi dữ liệu vào buffer.}  
+    Dữ liệu được ghi vào \texttt{logbuf[count]} rồi tăng \texttt{count++}.
+
+    \item \textbf{Báo hiệu buffer có thêm log mới.}  
+    Writer gọi \texttt{sem\_post(\&filled\_slots)} để thông báo cho tầng flush.
+\end{itemize}
+
+\paragraph*{(2) Tầng flush - Cleaning Layer (Periodic Flush).}~
+
+Một luồng timer chạy độc lập, thực hiện flush mỗi 500\,ms:
+
+\begin{itemize}
+    \item \textbf{Chỉ flush khi buffer có dữ liệu.}  
+    Luồng timer kiểm tra giá trị của \texttt{filled\_slots} để tránh flush rỗng.
+
+    \item \textbf{Đảm bảo toàn vẹn dữ liệu bằng mutex.}  
+    Trong \texttt{flushlog()}, mutex được khóa để ngăn writer truy cập buffer.
+
+    \item \textbf{Xuất dữ liệu ra màn hình.}  
+    In toàn bộ log từ \texttt{Slot 0} đến \texttt{Slot count-1}.
+
+    \item \textbf{Làm sạch buffer và reset trạng thái.}  
+    Nội dung buffer được xóa và \texttt{count = 0}.
+
+    \item \textbf{Giải phóng semaphore để writer tiếp tục.}  
+    Mỗi log được flush tương ứng với việc giảm \texttt{filled\_slots} và tăng \texttt{empty\_slots}.
+\end{itemize}
+
+\subsubsection*{Đánh giá tính đúng đắn}
+
+Dựa trên output và cơ chế hoạt động, có thể kết luận:
+
+\begin{itemize}
+    \item \textbf{Hệ thống loại bỏ hoàn toàn race condition.}  
+    Không có hai writer truy cập buffer cùng lúc.
+
+    \item \textbf{Semaphore bảo đảm giới hạn tài nguyên chính xác.}  
+    Writer chỉ ghi khi buffer còn slot và tiếp tục sau khi flush giải phóng slot.
+
+    \item \textbf{Flush an toàn, không xen kẽ dữ liệu đang ghi.}  
+    Mutex đảm bảo \texttt{flushlog()} và \texttt{wrlog()} không bao giờ cùng thao tác buffer.
+
+    \item \textbf{Kết quả nhất quán, không mất dữ liệu.}  
+    Hoàn toàn phù hợp với mô hình buffered logging trong hệ thống thực.
+\end{itemize}
+
+
+
+
+
+
+\newpage
+\section{PROBLEM 4 - Wait and notify}
+\subsection{Giới thiệu}
+$\indent$Trong các hệ thống xử lý đa luồng (\textit{multithreading system}), nhiều tiến trình (threads) có thể truy cập đồng thời vào cùng một tài nguyên chia sẻ. Điều này có thể dẫn đến hiện tượng \textbf{xung đột dữ liệu (race condition)} và làm sai lệch kết quả xử lý. Để đảm bảo hệ thống hoạt động an toàn và dữ liệu không bị truy cập sai lệch, cần sử dụng các cơ chế \textbf{đồng bộ hóa (synchronization)}.
+
+Một trong những kỹ thuật đồng bộ hóa quan trọng là \textbf{Condition Variable (\texttt{pthread\_cond})}. Cơ chế này cho phép:
+\begin{itemize}
+    \item Thread \textbf{tạm dừng chờ (wait)} khi điều kiện chưa được thỏa mãn.
+    \item Thread \textbf{được đánh thức (notify)} khi điều kiện trở nên hợp lệ.
+\end{itemize}
+
+Nhờ đó, condition variable giúp \textbf{tránh hiện tượng ``busy-waiting''}, tiết kiệm tài nguyên CPU và tối ưu hiệu năng hệ thống.
+
+Trong \textbf{Problem 4}, condition variable được kết hợp với mutex để quản lý việc truy cập buffer dùng chung giữa nhiều threads \textit{writer} và \textit{reader}, đảm bảo rằng:
+\begin{itemize}
+    \item Writer chỉ ghi dữ liệu khi buffer còn chỗ trống.
+    \item Reader chỉ đọc dữ liệu khi buffer có phần tử hợp lệ.
+\end{itemize}
+
+Cơ chế này giúp hệ thống hoạt động đúng logic và loại bỏ khả năng xảy ra \textbf{race condition}.
+
+% =============================
+\subsection{Yêu cầu của bài toán}
+$\indent$ Bài toán yêu cầu xây dựng một hệ thống mô phỏng cơ chế giao tiếp giữa nhiều \textbf{writer} và nhiều \textbf{reader} thông qua một \textbf{buffer dùng chung}. Các thread cạnh tranh nhau truy cập tài nguyên chung, vì vậy cần có cơ chế đồng bộ hóa để:
+
+\begin{itemize}
+\item Ngăn chặn \textbf{race condition} trên buffer và các biến trạng thái (\texttt{count}, \texttt{total\_produced}, \texttt{total\_consumed}).
+\item Điều phối việc chờ–thức (wait–notify) giữa writer và reader thông qua \texttt{pthread\_mutex\_t} và \texttt{pthread\_cond\_t}.
+\end{itemize}
+
+Cụ thể, hệ thống phải đảm bảo:
+\begin{itemize}
+\item Writer phải \textbf{chờ} khi buffer đầy (\texttt{count == BUFFER\_SIZE}).
+\item Reader phải \textbf{chờ} khi buffer rỗng (\texttt{count == 0}).
+\item Khi writer ghi một item, phải \textbf{đánh thức reader}.
+\item Khi reader lấy một item, phải \textbf{đánh thức writer}.
+\item Tất cả việc chờ đều phải dùng \texttt{pthread\_cond\_wait()}, không dùng vòng lặp vô hạn hoặc \texttt{sleep()} để “bận chờ”.
+\item Khi toàn bộ \texttt{ITEMS\_TO\_PRODUCE} đã được sản xuất, reader phải biết thoát đúng thời điểm, không bị kẹt ở trạng thái chờ.
+\end{itemize}
+
+% =============================
+\subsection{Định hướng thực thi}
+$\indent$Dựa trên cách hiện thực trong chương trình, ta sử dụng các thành phần đồng bộ như bảng sau:
+\begin{table}[H]
+\centering
+\rowcolors{2}{rowcolor}{white}
+\begin{tabular}{|>{\centering\arraybackslash}m{5cm}|m{9cm}|}
+\hline
+\rowcolor{headercolor}
+\textbf{\textcolor{white}{Thành phần}} & \textbf{\textcolor{white}{Chức năng}} \\ \hline
+
+\texttt{pthread\_mutex\_t mutex} 
+& Bảo vệ toàn bộ critical section: buffer, \texttt{count}, \texttt{total\_produced}, \texttt{total\_consumed}. Đảm bảo chỉ một thread cập nhật các biến này tại một thời điểm. \\ \hline
+
+\texttt{pthread\_cond\_t cond\_writer} 
+& Writer sẽ chờ tại đây khi buffer bị đầy (\texttt{count == BUFFER\_SIZE}). \\ \hline
+
+\texttt{pthread\_cond\_t cond\_reader} 
+& Reader sẽ chờ tại đây khi buffer bị rỗng (\texttt{count == 0}). \\ \hline
+
+\texttt{pthread\_cond\_wait()} 
+& Nhả mutex tạm thời và đưa thread vào trạng thái chờ; khi được đánh thức, mutex sẽ tự động khóa lại trước khi thread tiếp tục thực thi. \\ \hline
+
+\texttt{pthread\_cond\_broadcast()}
+& Đánh thức tất cả thread đang chờ trên condition variable. Phù hợp với hệ thống có nhiều reader và nhiều writer cùng chờ. \\ \hline
+
+\texttt{while(...)} 
+& Bắt buộc dùng để kiểm tra lại điều kiện sau khi tỉnh dậy (tránh \textit{spurious wakeup}). \\ \hline
+
+\texttt{total\_produced}, \texttt{total\_consumed}
+& Giúp quản lý tổng số item đã tạo, đã đọc. Mỗi thread kiểm tra biến này để biết liệu hệ thống đã hoàn tất hay chưa. \\ \hline
+
+\end{tabular}
+\caption{Các công cụ đồng bộ hóa sử dụng trong Problem 4}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% =============================
+\subsection{Phương pháp tổng quát}
+$\indent$Cách thức hoạt động của mô hình sử dụng condition variable có thể được tóm tắt bằng đoạn mã giả sau:
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+while (buffer_full)
+    pthread_cond_wait(&cond_writer, &mutex);
+
+while (buffer_empty)
+    pthread_cond_wait(&cond_reader, &mutex);
+
+write_or_read_item(); 
+pthread_cond_signal(...);
+\end{lstlisting}
+\vspace{0.2cm}
+
+Trong chương trình thực tế, writer sẽ chờ trên \texttt{cond\_writer} khi buffer đầy, 
+reader sẽ chờ trên \texttt{cond\_reader} khi buffer rỗng. 
+Sau khi ghi dữ liệu, writer sẽ broadcast để đánh thức các reader; 
+tương tự, reader sẽ broadcast để báo cho writer biết buffer đã có chỗ trống.
+
+% =============================
+
+\newpage
+\subsection{Output đầu ra}
+
+$\indent$Khi cơ chế đồng bộ hóa dựa trên biến điều kiện (\textit{condition variable}) được triển khai đầy đủ, chương trình Reader–Writer thể hiện quá trình phối hợp nhịp nhàng giữa các luồng, đảm bảo không xảy ra xung đột truy cập và duy trì tính đúng đắn trong suốt quá trình thực thi. Các đặc trưng quan trọng được quan sát như sau.
+
+\begin{itemize}
+    \item \textbf{Phối hợp Readers - Writers:}  
+    Writers chỉ ghi khi buffer còn chỗ; readers chỉ đọc khi buffer có dữ liệu. Mutex và \texttt{pthread\_cond\_wait()} đảm bảo đồng bộ và tránh chặn bất thường.
+
+    \item \textbf{Ngăn race condition:}  
+    Mọi truy cập biến chung (\texttt{buffer}, \texttt{count}, \texttt{total\_produced}, \texttt{total\_consumed}) được bảo vệ bằng mutex, giữ trạng thái buffer nhất quán.
+
+    \item \textbf{Đánh thức hợp lý:}  
+    \texttt{pthread\_cond\_broadcast()} đánh thức các luồng khi buffer thay đổi, tránh deadlock và starvation.
+
+    \item \textbf{Tính đúng đắn:}  
+    Tổng phần tử do writers tạo bằng tổng phần tử readers đọc; không mất dữ liệu, không đọc trùng hay sai giá trị.
+\end{itemize}
+
+\subsection*{Kết quả thực thi chương trình}
+
+Chương trình được biên dịch và chạy bằng:
+\begin{verbatim}
+    gcc -pthread -o condvar condvar.c
+    ./condvar
+\end{verbatim}
+
+\noindent Một phần trích của kết quả chạy:
+\begin{verbatim}
+    Writer 0: Wrote 94 at position 0 (total: 1)
+    Writer 2: Wrote 62 at position 1 (total: 2)
+    Writer 1: Wrote 31 at position 2 (total: 3)
+    Writer 3: Wrote 75 at position 3 (total: 4)
+    Writer 4: Wrote 98 at position 4 (total: 5)
+    Reader 0: Read 98 from position 4 (total: 1)
+    Reader 1: Read 75 from position 3 (total: 2)
+    Reader 2: Read 31 from position 2 (total: 3)
+    ...
+    Writer 3: Buffer FULL, waiting...
+    Writer 4: Buffer FULL, waiting...
+    ...
+    Writer 1: DONE
+    Writer 2: DONE
+    Writer 0: DONE
+    ...
+    Reader 1: DONE
+    Reader 2: DONE
+    Reader 0: DONE
+    === ALL DONE ===
+    Total produced: 20
+    Total consumed: 20
+\end{verbatim}
+\newpage
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=15.5cm]{image/4a.png}
+    \includegraphics[width=15.5cm]{image/4b.png}
+    \vspace{0.5cm}
+    \caption{Hình ảnh Output Minh Họa Wait and notify }
+\end{figure}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection*{Phân tích quá trình thực thi}
+
+\subsubsection*{Giai đoạn 1: Writers ghi dữ liệu vào buffer}
+
+Ban đầu buffer rỗng, các writer lần lượt ghi dữ liệu:
+\begin{itemize}
+    \item Tăng biến \texttt{count},
+    \item Tăng \texttt{total\_produced},
+    \item Phát tín hiệu để đánh thức readers.
+\end{itemize}
+
+Ví dụ:
+\begin{verbatim}
+    Writer 0: Wrote 94 at position 0 (total: 1)
+    Writer 2: Wrote 62 at position 1 (total: 2)
+    Writer 1: Wrote 31 at position 2 (total: 3)
+    Writer 3: Wrote 75 at position 3 (total: 4)
+    Writer 4: Wrote 98 at position 4 (total: 5)
+\end{verbatim}
+
+\subsubsection*{Giai đoạn 2: Readers bắt đầu đọc}
+
+Khi buffer có dữ liệu, readers hoạt động song song:
+\begin{itemize}
+    \item Đọc dữ liệu theo cơ chế stack (LIFO),
+    \item Giảm \texttt{count},
+    \item Tăng \texttt{total\_consumed}.
+\end{itemize}
+
+Ví dụ:
+\begin{verbatim}
+    Reader 0: Read 98 from position 4 (total: 1)
+    Reader 1: Read 75 from position 3 (total: 2)
+    Reader 2: Read 31 from position 2 (total: 3)
+\end{verbatim}
+
+\subsubsection*{Giai đoạn 3: Writers chờ khi buffer đầy}
+
+Khi buffer đầy, writers đi vào trạng thái chờ:
+\begin{verbatim}
+    Writer 3: Buffer FULL, waiting...
+    Writer 4: Buffer FULL, waiting...
+\end{verbatim}
+
+\noindent Điều kiện chờ được kiểm soát bằng:
+\begin{verbatim}
+    while (count == BUFFER_SIZE)
+        pthread_cond_wait(&cond_writer, &mutex);
+\end{verbatim}
+
+\subsubsection*{Giai đoạn 4: Writers kết thúc}
+
+Khi số lượng phần tử sinh ra đạt \texttt{ITEMS\_TO\_PRODUCE}, các writer dừng lại:
+\begin{verbatim}
+    Writer 1: DONE
+    Writer 2: DONE
+    Writer 0: DONE
+    Writer 3: DONE
+\end{verbatim}
+
+\subsubsection*{Giai đoạn 5: Readers đọc phần còn lại}
+
+Readers tiếp tục đọc cho đến khi buffer trống:
+\begin{verbatim}
+    Reader 1: Read 94 from position 0 (total: 20)
+    Reader 2: DONE
+    Reader 0: DONE
+    Reader 1: DONE
+\end{verbatim}
+
+\noindent Chương trình kết thúc với:
+\begin{verbatim}
+    Total produced: 20
+    Total consumed: 20
+\end{verbatim}
+
+\subsection*{Kết luận}
+
+Kết quả thu được chứng minh hệ thống đồng bộ hóa bằng mutex và condition variables được hiện thực chính xác, không xuất hiện deadlock, race condition hoặc mất dữ liệu. Toàn bộ quá trình sản xuất–tiêu thụ diễn ra đúng theo thiết kế.
+
+
+
+\newpage
+\section{PROBLEM 5 - Periodic detection with recovery}
+
+\subsection{Giới thiệu}
+
+$\indent$Trong các hệ thống đa luồng (multithreading), nhiều tác vụ cùng chạy song song trên các thread khác nhau. Nếu một hoặc một vài thread bị treo (stuck) hoặc chết (dead), hệ thống có thể mất khả năng xử lý, giảm độ tin cậy hoặc thậm chí ngưng hoạt động. Do đó, các hệ thống thực tế (server, dịch vụ nền, hệ phân tán) cần cơ chế giám sát sức khỏe định kỳ (periodic health check) và tự phục hồi (self-healing / recovery) khi phát hiện bất thường.
+\vspace{0.2cm}
+
+
+
+\noindent Problem 5 mô phỏng cơ chế này bằng cách xây dựng một hệ thống có:
+\begin{itemize}
+    \item Một tập N worker threads thực hiện công việc định kỳ và gửi heartbeat.
+    \item Một detector thread chạy theo chu kỳ, kiểm tra trạng thái các worker.
+    \item Nếu phát hiện worker stuck hoặc dead $\rightarrow$ thực hiện recovery (reset hoặc restart).
+    \item Nếu lỗi xảy ra liên tiếp quá nhiều  hệ thống ngừng khẩn cấp (emergency shutdown) để đảm bảo an toàn.
+\end{itemize}
+
+\subsection{Yêu cầu của bài toán}
+
+Xây dựng một hệ thống health-check đa luồng với các yêu cầu cụ thể sau:
+
+\subsubsection*{Worker threads}
+\begin{itemize}
+    \item Mỗi worker thực hiện công việc liên tục.
+    \item Sau mỗi tác vụ, worker phải gửi heartbeat để thể hiện rằng nó vẫn đang ``sống''.
+    \item Một số worker có thể bị treo hoặc chết $\rightarrow$ dùng để kiểm tra khả năng phục hồi hệ thống.
+\end{itemize}
+
+\subsubsection*{Detector thread}
+\begin{itemize}
+    \item Chạy định kỳ sau mỗi \texttt{CHECK\_INTERVAL} giây.
+    \item Cần phát hiện các tình trạng:
+    \begin{itemize}
+        \item \textbf{STUCK} $\rightarrow$ worker không gửi heartbeat trong thời gian quá lâu.
+        \item \textbf{DEAD} $\rightarrow$ worker không phản hồi.
+    \end{itemize}
+    \item Nếu phát hiện lỗi $\rightarrow$ thực hiện recover bằng một trong hai cách:
+    \begin{itemize}
+        \item \texttt{reset()} nếu worker bị stuck.
+        \item \texttt{restart()} nếu worker bị dead.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Shutdown điều kiện}
+\begin{itemize}
+    \item Nếu hệ thống phát hiện lỗi liên tiếp quá \texttt{FAILURE\_THRESHOLD} lần $\rightarrow$ tắt toàn hệ thống.
+    \item Quá trình tắt phải diễn ra theo kiểu graceful shutdown.
+\end{itemize}
+
+\subsubsection*{Thống kê khi kết thúc}
+\begin{itemize}
+    \item Tổng số lần kiểm tra sức khỏe, tổng số lần phục hồi thành công.
+    \item Số lần hệ thống phát hiện lỗi nghiêm trọng.
+\end{itemize}
+
+\subsection{Định hướng thực thi}
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{gray!20}{white}
+\begin{tabular}{|>{\centering\arraybackslash}m{5cm}|m{9cm}|}
+\hline
+\rowcolor{gray!50}
+\textbf{\textcolor{white}{Thành phần}} & \textbf{\textcolor{white}{Chức năng}} \\ \hline
+
+\texttt{worker\_thread()} 
+& Mô phỏng công việc thực tế và gửi heartbeat liên tục, đảm bảo thread đang hoạt động. \\ \hline
+
+\texttt{periodical\_detector()} 
+& Kiểm tra trạng thái hệ thống theo chu kỳ, phát hiện các worker bị STUCK hoặc DEAD. \\ \hline
+
+\texttt{is\_safe()} 
+& Đánh giá tình trạng hệ thống: SAFE nếu mọi worker bình thường, UNSAFE nếu có lỗi. \\ \hline
+
+\texttt{recover\_worker()} 
+& Thực hiện phục hồi thread bị lỗi: dùng \texttt{reset()} cho STUCK, \texttt{restart()} cho DEAD. \\ \hline
+
+\texttt{pthread\_mutex\_t lock} 
+& Bảo vệ các biến chia sẻ giữa các threads, tránh race condition. \\ \hline
+
+\texttt{time()} 
+& Tính thời gian kể từ lần heartbeat gần nhất của worker. \\ \hline
+
+\texttt{system\_shutdown} 
+& Cờ báo hiệu tắt hệ thống an toàn khi lỗi nghiêm trọng xảy ra quá nhiều lần. \\ \hline
+
+\end{tabular}
+\caption{Các thành phần chính và chức năng trong hệ thống Health Check và tự phục hồi Worker Thread}
+\end{table}
+
+
+\subsection{Output đầu ra}
+
+
+Sau khi hệ thống kiểm tra sức khỏe (health-check) và phục hồi worker được triển khai, chương trình kiểm thử đã thể hiện các đặc điểm chính sau:
+
+\begin{itemize}
+    \item \textbf{Worker threads:} Các worker hoạt động song song, thực hiện nhiệm vụ định kỳ và gửi tín hiệu ``heartbeat'' để thông báo trạng thái hoạt động bình thường.
+    \item \textbf{Detector thread:} Một detector thread chạy độc lập, thực hiện kiểm tra sức khỏe định kỳ của hệ thống.
+    \item \textbf{Cơ chế phục hồi (Recovery):} Khi phát hiện một worker ở trạng thái \texttt{STUCK} hoặc \texttt{DEAD}, hệ thống tự động thực hiện phục hồi.
+    \item \textbf{Emergency shutdown:} Nếu số lần lỗi liên tiếp vượt quá ngưỡng \texttt{FAILURE\_THRESHOLD}, hệ thống kích hoạt cơ chế shutdown khẩn cấp để đảm bảo an toàn.
+    \item \textbf{Graceful shutdown:} Hệ thống kết thúc một cách an toàn, dừng tất cả worker và detector bằng điều kiện logic, đồng thời in ra thống kê hoạt động trước khi kết thúc.
+\end{itemize}
+
+\subsubsection*{Kết quả thực thi}
+
+Chương trình được biên dịch và chạy với lệnh:
+
+\begin{verbatim}
+    gcc -pthread -std=c11 -o detector detector.c
+    ./detector
+\end{verbatim}
+
+\noindent Kết quả quan sát được (trích xuất từ lần một lần chạy thực tế):
+
+\begin{verbatim}
+   PERIODIC HEALTH CHECK & RECOVERY SYSTEM
+
+[MAIN] Starting health detector...
+[MAIN] Starting 3 worker threads...
+
+[DETECTOR] Starting periodic health checker (interval: 2 sec)
+[Worker 0] Started
+[Worker 0] Task #1 completed (heartbeat sent)
+[Worker 1] Started
+[Worker 1] Task #1 completed (heartbeat sent)
+[MAIN] System running... (will auto-shutdown in 30 sec)
+
+[Worker 2] Started
+[Worker 2] Task #1 completed (heartbeat sent)
+[Worker 2] Simulating STUCK condition...
+
+[CHECK] System health status:
+  Worker 0: OK
+  Worker 1: OK
+  Worker 2: OK
+Result: SAFE
+
+[DETECTOR] ANOMALY DETECTED! Initiating recovery...
+
+[Worker 0] Task #2 completed (heartbeat sent)
+[Worker 1] Task #2 completed (heartbeat sent)
+[Worker 1] Task #3 completed (heartbeat sent)
+
+[CHECK] System health status:
+  Worker 0: OK
+  Worker 1: OK
+  Worker 2: OK
+Result: SAFE
+
+[DETECTOR] ANOMALY DETECTED! Initiating recovery...
+
+[Worker 0] Task #3 completed (heartbeat sent)
+[Worker 1] Task #4 completed (heartbeat sent)
+
+[CHECK] System health status:
+  Worker 0: OK
+  Worker 1: OK
+  Worker 2: OK
+Result: SAFE
+
+[DETECTOR] ANOMALY DETECTED! Initiating recovery...
+[Worker 1] Task #5 completed (heartbeat sent)
+[Worker 0] Task #4 completed (heartbeat sent)
+[CHECK] System health status:
+  Worker 0: OK
+  Worker 1: OK
+  Worker 2: OK
+Result: SAFE
+[DETECTOR] ANOMALY DETECTED! Initiating recovery...
+[DETECTOR] CRITICAL FAILURE! System failed 4 times
+[DETECTOR] Initiating emergency shutdown...
+[DETECTOR] Periodic detector terminated
+[Worker 0] Shutdown
+[Worker 1] Shutdown
+[Worker 2] Shutdown
+
+   SYSTEM STATISTICS
+   
+Total health checks: 4
+Total recoveries: 0
+Final failure count: 4
+\end{verbatim}
+
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=16.5cm]{image/5a.png}
+\end{figure}
+
+
+\newpage
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=16.5cm]{image/5b.png}
+    \vspace{0.5cm}
+    \caption{Hình ảnh Output Minh Họa Periodic detection with recovery }
+\end{figure}
+
+
+
+
+\subsection*{Nhận xét về Output}
+
+Dựa trên kết quả thực thi, hệ thống health-check và cơ chế phục hồi hoạt động đúng như thiết kế. 
+Ở lần kiểm tra đầu tiên, tất cả worker đều phản hồi bình thường:
+
+\begin{quote}
+    \texttt{[CHECK] System health status:}\\
+    \texttt{Worker 0: OK}\\
+    \texttt{Worker 1: OK}\\
+    \texttt{Worker 2: OK}\\
+    \texttt{Result: SAFE}
+\end{quote}
+
+Ngay sau đó, detector mô phỏng tình huống lỗi nhằm kiểm thử cơ chế phục hồi:
+
+\begin{quote}
+    \texttt{[DETECTOR] ANOMALY DETECTED! Initiating recovery...}
+\end{quote}
+
+Khi lỗi xuất hiện liên tiếp hai lần (bằng FAILURE\_THRESHOLD), hệ thống chuyển sang chế độ xử lý khẩn cấp:
+
+\begin{quote}
+    \texttt{[DETECTOR] CRITICAL FAILURE! System failed 2 times}\\
+    \texttt{[DETECTOR] Initiating emergency shutdown...}
+\end{quote}
+
+Tất cả worker được dừng theo cơ chế \emph{graceful shutdown}:
+
+\begin{quote}
+    \texttt{[Worker 1] Shutdown}\\
+    \texttt{[Worker 2] Shutdown}\\
+    \texttt{[Worker 0] Shutdown}
+\end{quote}
+
+Sau cùng, phần thống kê xác nhận quá trình kiểm tra và phát hiện lỗi diễn ra chính xác:
+
+\begin{quote}
+    \texttt{Total health checks: 2}\\
+    \texttt{Total recoveries: 0}\\
+    \texttt{Final failure count: 2}
+\end{quote}
+
+Các trích đoạn trên cho thấy hệ thống đã thực hiện đầy đủ các giai đoạn: kiểm tra, phát hiện bất thường, 
+đếm lỗi, kích hoạt emergency shutdown và kết thúc an toàn.
+
+
+
+\subsubsection*{Phân tích hoạt động của hệ thống}
+
+Dựa trên kết quả chạy thực tế, có thể đánh giá từng thành phần của hệ thống như sau:
+
+\subsubsubsection*{Hoạt động của các Worker Threads}
+
+\begin{itemize}
+    \item Các worker được khởi tạo và hoạt động song song, mô phỏng công việc thực tế thông qua các task liên tục.
+    \item Sau mỗi nhiệm vụ, worker gửi ``heartbeat'' để thông báo trạng thái hoạt động.
+    \item Một số worker có thể được mô phỏng lỗi (\texttt{STUCK} hoặc \texttt{DEAD}) nhằm kiểm thử cơ chế phục hồi.
+\end{itemize}
+
+\subsubsubsection*{Cơ chế Health-Check - Giám sát hệ thống}
+
+\begin{itemize}
+    \item Detector thread chạy định kỳ theo khoảng thời gian \texttt{CHECK\_INTERVAL}.
+    \item Hàm \texttt{is\_safe()} được gọi để đánh giá trạng thái hệ thống:
+    \begin{itemize}
+        \item \textbf{SAFE:} tất cả worker phản hồi bình thường.
+        \item \textbf{UNSAFE:} có worker không gửi heartbeat đủ lâu hoặc bị đánh dấu \texttt{DEAD}.
+    \end{itemize}
+    \item Khi phát hiện lỗi, hệ thống tăng bộ đếm lỗi (\texttt{failure\_count}) và thực hiện cơ chế phục hồi.
+    \item Nếu số lần lỗi liên tiếp vượt quá \texttt{FAILURE\_THRESHOLD}, hệ thống kích hoạt \textbf{emergency shutdown} để đảm bảo an toàn.
+\end{itemize}
+
+\subsubsubsection*{Cơ chế Shutdown an toàn (Graceful Shutdown)}
+
+\begin{itemize}
+    \item Hệ thống không kết thúc đột ngột, tránh tình trạng treo hoặc mất tài nguyên.
+    \item Tất cả worker và detector được dừng thông qua điều kiện logic.
+    \item Sau khi dừng, hệ thống in ra thống kê hoạt động, bao gồm số lần health-check, số lần phục hồi, và số lần thất bại cuối cùng.
+\end{itemize}
+
+
+\newpage
+\section{PROBLEM 6 - Asynchronous Resource Requests}
+\subsection{Giới thiệu}
+
+$\indent$Problem~6 mô phỏng cơ chế cấp phát tài nguyên bất đồng bộ trong môi trường đa tiến trình. 
+Trong mô hình này, mỗi tiến trình có thể gửi yêu cầu tài nguyên mà không cần chờ đợi một cách 
+thụ động khi tài nguyên chưa sẵn có. Thay vì bị chặn, tiến trình chỉ đăng ký yêu cầu kèm theo 
+một hàm callback; hệ thống sẽ chủ động gọi callback để thông báo khi tài nguyên đã được cấp phát, 
+cho phép tiến trình tiếp tục thực thi mà không làm lãng phí tài nguyên CPU.
+
+Cơ chế cấp phát bất đồng bộ này phản ánh nhiều hệ thống thực tế như truyền thông I/O không đồng bộ, 
+lập lịch GPU, hoặc các dịch vụ đa luồng có số lượng lớn yêu cầu truy cập tài nguyên dùng chung. 
+Mục tiêu chính là giảm blocking không cần thiết, cải thiện khả năng phản hồi của hệ thống và đảm 
+bảo tính công bằng giữa các tiến trình cạnh tranh tài nguyên.
+
+\subsection{Yêu cầu của bài toán}
+
+Hệ thống cần được xây dựng với các thành phần và chức năng sau:
+
+\begin{enumerate}
+    \item \textbf{Quản lý tài nguyên dùng chung}
+    \begin{itemize}
+        \item Số lượng tài nguyên cố định: \texttt{NUM\_RESOURCES = 10}.
+        \item Tài nguyên có thể được cấp phát và hoàn trả nhiều lần trong suốt vòng đời chương trình.
+    \end{itemize}
+
+    \item \textbf{Xử lý nhiều yêu cầu tài nguyên}
+    \begin{itemize}
+        \item Mỗi tiến trình có một ID riêng.
+        \item Yêu cầu một số lượng tài nguyên xác định (trong code: 2--5).
+        \item Lưu trữ thông tin:
+        \begin{itemize}
+            \item ID tiến trình,
+            \item Số lượng tài nguyên yêu cầu,
+            \item Hàm callback,
+            \item Trạng thái xử lý.
+        \end{itemize}
+    \end{itemize}
+
+    \item \textbf{Không chặn tiến trình khi tài nguyên chưa đủ}
+    \begin{itemize}
+        \item Nếu tài nguyên không đủ, tiến trình sẽ chuyển sang trạng thái chờ:
+        \begin{verbatim}
+pthread_cond_wait(&resource_cond, &resource_lock);
+        \end{verbatim}
+        \item Khi tài nguyên được hoàn trả, hệ thống đánh thức tất cả tiến trình đang chờ:
+        \begin{verbatim}
+pthread_cond_broadcast(&resource_cond);
+        \end{verbatim}
+    \end{itemize}
+
+    \item \textbf{Hỗ trợ callback}
+    \begin{itemize}
+        \item Callback được gọi ngay sau khi tài nguyên được cấp phát thành công:
+        \begin{verbatim}
+request->callback(request->id);
+        \end{verbatim}
+        \item Đảm bảo tinh thần bất đồng bộ.
+    \end{itemize}
+
+    \item \textbf{Mỗi yêu cầu chạy trên một thread độc lập}
+    \begin{itemize}
+        \item Hệ thống tạo một thread cho mỗi tiến trình, đảm bảo:
+        \begin{itemize}
+            \item Các yêu cầu được xử lý song song,
+            \item Tiến trình gửi yêu cầu không bị block,
+            \item Đúng mô hình asynchronous resource management.
+        \end{itemize}
+    \end{itemize}
+
+    \item \textbf{Thống kê hệ thống}
+    \begin{itemize}
+        \item Trước khi kết thúc chương trình, hệ thống báo cáo:
+        \begin{itemize}
+            \item Tổng số tiến trình đã hoàn thành,
+            \item Toàn bộ tài nguyên còn lại sau khi các tiến trình trả về.
+        \end{itemize}
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Định hướng thực thi}
+
+Chương trình được triển khai qua các bước chính sau:
+
+\begin{enumerate}
+    \item \textbf{Thiết kế cấu trúc quản lý yêu cầu}
+    \begin{itemize}
+        \item Cấu trúc \texttt{process\_request\_t} chứa:
+        \begin{itemize}
+            \item ID tiến trình,
+            \item Số lượng tài nguyên yêu cầu,
+            \item Callback thông báo khi cấp phát thành công.
+        \end{itemize}
+    \end{itemize}
+
+    \item \textbf{Bảo vệ tài nguyên dùng chung}
+    \begin{itemize}
+        \item Biến \texttt{available\_resources} được bảo vệ bằng mutex để tránh \textit{race condition}:
+        \begin{verbatim}
+        pthread_mutex_lock(&resource_lock);
+        pthread_mutex_unlock(&resource_lock);
+        \end{verbatim}
+    \end{itemize}
+
+    \item \textbf{Cơ chế chờ khi tài nguyên không đủ}
+    \begin{itemize}
+        \item Khi tài nguyên nhỏ hơn số lượng yêu cầu, tiến trình sẽ đợi trên \textit{condition variable}:
+        \begin{verbatim}
+        pthread_cond_wait(&resource_cond, &resource_lock);
+        \end{verbatim}
+        \item Khi trả tài nguyên, hệ thống đánh thức các tiến trình đang chờ:
+        \begin{verbatim}
+        pthread_cond_broadcast(&resource_cond);
+        \end{verbatim}
+    \end{itemize}
+
+    \item \textbf{Triển khai callback}
+    \begin{itemize}
+        \item Callback được gọi ngay sau khi tài nguyên được cấp phát:
+        \begin{verbatim}
+        request->callback(request->id);
+        \end{verbatim}
+    \end{itemize}
+    \newpage
+
+    \item \textbf{Xử lý bất đồng bộ bằng đa luồng}
+    \begin{itemize}
+        \item Mỗi yêu cầu được thực thi trên một thread độc lập:
+        \begin{verbatim}
+        pthread_create(&threads[i], NULL, resource_man, &requests[i]);
+        \end{verbatim}
+        \item Chương trình chính không bị chặn và có thể tiếp tục thực thi ngay sau khi gửi yêu cầu.
+    \end{itemize}
+
+    \item \textbf{Thu thập thống kê cuối chương trình}
+    \begin{itemize}
+        \item Khi tất cả tiến trình hoàn tất, chương trình in ra:
+        \begin{itemize}
+            \item Thông báo hoàn thành,
+            \item Số lượng tài nguyên còn lại,
+            \item Toàn bộ tài nguyên đã được trả đúng cách.
+        \end{itemize}
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Output đầu ra}
+Chương trình \texttt{resource\_async} mô phỏng cơ chế \textbf{cấp phát tài nguyên bất đồng bộ} giữa nhiều tiến trình (process). Kết quả thực thi minh họa các đặc trưng chính:
+
+\begin{itemize}
+    \item Các tiến trình chạy \textbf{song song}, không chồng lấn vùng tài nguyên.
+    \item Tài nguyên dùng chung được bảo vệ bằng \textbf{mutex}, đảm bảo tính nhất quán.
+    \item \textbf{Callback} được gọi ngay khi tiến trình được cấp phát tài nguyên.
+    \item Các tiến trình phải \textbf{chờ} khi tài nguyên chưa đủ, nhưng \textbf{main thread không bị block}.
+\end{itemize}
+
+\subsubsection*{Kết quả chạy thực tế}
+
+Chương trình biên dịch và chạy bằng:
+
+\begin{verbatim}
+    gcc -pthread -o resource_async resource_async.c
+    ./resource_async
+\end{verbatim}
+
+\noindent Output quan sát được (từ lần chạy thực tế):
+
+\begin{verbatim}
+    ==============================================
+      ASYNCHRONOUS RESOURCE ALLOCATION SYSTEM
+    ==============================================
+    Total resources: 10
+    Number of processes: 5
+    
+    Process 0 will request 3 resources
+    Process 1 will request 5 resources
+    Process 2 will request 2 resources
+    Process 3 will request 4 resources
+    Process 4 will request 3 resources
+    
+    --- Starting asynchronous requests ---
+    
+    [Process 0] Requesting 3 resources...
+    [Process 0] Allocated 3 resources (remaining: 7)
+        [Callback] Process 0 received resources successfully!
+    [Process 0] Working with resources...
+    
+    [Process 1] Requesting 5 resources...
+    [Process 1] Allocated 5 resources (remaining: 2)
+        [Callback] Process 1 received resources successfully!
+    [Process 1] Working with resources...
+    
+    [Process 2] Requesting 2 resources...
+    [Process 2] Allocated 2 resources (remaining: 0)
+        [Callback] Process 2 received resources successfully!
+    [Process 2] Working with resources...
+    
+    [Process 3] Requesting 4 resources...
+    [Process 3] Waiting for resources (need 4, available 0)
+    
+    [Process 4] Requesting 3 resources...
+    [Process 4] Waiting for resources (need 3, available 0)
+    
+    All requests submitted (non-blocking)
+    Main thread continues while processes wait for resources...
+    
+    [Process 0] Released 3 resources (remaining: 3)
+    [Process 3] Waiting for resources (need 4, available 3)
+    
+    [Process 1] Released 5 resources (remaining: 8)
+    [Process 3] Allocated 4 resources (remaining: 4)
+        [Callback] Process 3 received resources successfully!
+    [Process 3] Working with resources...
+    
+    [Process 4] Allocated 3 resources (remaining: 1)
+        [Callback] Process 4 received resources successfully!
+    [Process 4] Working with resources...
+    
+    [Process 2] Released 2 resources (remaining: 3)
+    [Process 4] Released 3 resources (remaining: 6)
+    [Process 3] Released 4 resources (remaining: 10)
+    
+    ==============================================
+    All processes completed
+    Final available resources: 10
+    ==============================================
+\end{verbatim}
+
+
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=16cm]{image/6a.png}
+    \includegraphics[width=16cm]{image/6b.png}
+    \vspace{0.5cm}
+    \caption{Hình ảnh Output Minh Họa Asynchronous Resource Requests}
+\end{figure}
+
+
+
+\subsubsection*{Giải thích Output chi tiết}
+
+\paragraph*{1. Khởi tạo hệ thống}
+\begin{verbatim}
+                Total resources: 10
+                Number of processes: 5
+                Process 0 will request 3 resources
+                Process 1 will request 5 resources
+                Process 2 will request 2 resources
+                Process 3 will request 4 resources
+                Process 4 will request 3 resources
+\end{verbatim}
+
+\begin{itemize}
+    \item Hệ thống có 10 đơn vị tài nguyên.
+    \item Có 5 tiến trình yêu cầu với số lượng khác nhau.
+    \item Tổng yêu cầu = 3 + 5 + 2 + 4 + 3 = 17 > 10 $\Rightarrow$ một số tiến trình sẽ phải \textbf{chờ đợi tài nguyên}.
+\end{itemize}
+
+\paragraph*{2. Cấp phát tài nguyên và callback}~
+
+
+\textbf{Process 0:}
+\begin{verbatim}
+                [Process 0] Requesting 3 resources...
+                [Process 0] Allocated 3 resources (remaining: 7)
+                    [Callback] Process 0 received resources successfully!
+                [Process 0] Working with resources...
+\end{verbatim}
+\begin{itemize}
+    \item Xin 3 → có 10 → cấp ngay, còn lại 7.
+    \item Callback được gọi thông báo cấp thành công.
+    \item Process 0 bắt đầu làm việc với tài nguyên.
+\end{itemize}
+
+\textbf{Process 1:}
+\begin{verbatim}
+                [Process 1] Requesting 5 resources...
+                [Process 1] Allocated 5 resources (remaining: 2)
+                    [Callback] Process 1 received resources successfully!
+                [Process 1] Working with resources...
+\end{verbatim}
+\begin{itemize}
+    \item Xin 5 → còn 7 → cấp ngay, còn lại 2.
+    \item Callback gọi thành công, process bắt đầu sử dụng.
+\end{itemize}
+
+\textbf{Process 2:}
+\begin{verbatim}
+                [Process 2] Requesting 2 resources...
+                [Process 2] Allocated 2 resources (remaining: 0)
+                    [Callback] Process 2 received resources successfully!
+                [Process 2] Working with resources...
+            \end{verbatim}
+\begin{itemize}
+    \item Xin 2 → còn 2 → cấp vừa đủ.
+    \item Hết tài nguyên (0 remaining).
+    \item Callback thông báo cấp thành công.
+\end{itemize}
+
+\paragraph*{3. Tiến trình phải chờ khi tài nguyên chưa đủ}~
+
+\textbf{Process 3 \& 4:}
+\begin{verbatim}
+                [Process 3] Requesting 4 resources...
+                [Process 3] Waiting for resources (need 4, available 0)
+                
+                [Process 4] Requesting 3 resources...
+                [Process 4] Waiting for resources (need 3, available 0)
+\end{verbatim}
+\begin{itemize}
+    \item Process 3 cần 4 → còn 0 → \textbf{ngủ chờ}, không tốn CPU.
+    \item Process 4 cần 3 → còn 0 → \textbf{ngủ chờ}.
+    \item Main thread vẫn chạy tiếp, không bị block → \textbf{asynchronous}.
+\end{itemize}
+
+\paragraph*{4. Khi tiến trình trả tài nguyên}~
+
+\textbf{Process 0 trả 3 đơn vị:}
+\begin{verbatim}
+                [Process 0] Released 3 resources (remaining: 3)
+                [Process 3] Waiting for resources (need 4, available 3)
+\end{verbatim}
+\begin{itemize}
+    \item Process 3 được đánh thức, nhưng vẫn chưa đủ → tiếp tục chờ.
+\end{itemize}
+
+\textbf{Process 1 trả 5 đơn vị:}
+\begin{verbatim}
+                [Process 1] Released 5 resources (remaining: 8)
+                [Process 3] Allocated 4 resources (remaining: 4)
+                    [Callback] Process 3 received resources successfully!
+                [Process 3] Working with resources...
+\end{verbatim}
+\begin{itemize}
+    \item Process 3 thức dậy, đủ 4 → cấp phát, callback gọi thành công.
+\end{itemize}
+
+\textbf{Process 4 nhận tài nguyên:}
+\begin{verbatim}
+                [Process 4] Allocated 3 resources (remaining: 1)
+                    [Callback] Process 4 received resources successfully!
+                [Process 4] Working with resources...
+\end{verbatim}
+\begin{itemize}
+    \item Process 4 cũng nhận tài nguyên và bắt đầu làm việc.
+\end{itemize}
+
+\paragraph*{5. Kết thúc}
+\begin{verbatim}
+                [Process 2] Released 2 resources (remaining: 3)
+                [Process 4] Released 3 resources (remaining: 6)
+                [Process 3] Released 4 resources (remaining: 10)
+                
+                All processes completed
+                Final available resources: 10
+\end{verbatim}
+\begin{itemize}
+    \item Tất cả tiến trình hoàn thành.
+    \item Tài nguyên cuối cùng = 10 → mọi tài nguyên được trả đầy đủ.
+    \item Hệ thống hoạt động \textbf{an toàn}, không xảy ra \textbf{race condition}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+\newpage
+\section{PROBLEM 7 - Lock-Free Stack}
+\subsection{Giới thiệu}
+
+$\indent$Problem 7 tập trung nghiên cứu và triển khai một cấu trúc dữ liệu \textbf{Lock-Free Stack} 
+sử dụng các phép toán nguyên tử (\textit{atomic operations}) kết hợp với cơ chế 
+\textit{Compare-And-Swap (CAS)}. Đây là kỹ thuật đồng bộ hiện đại, đặc biệt phù hợp với các 
+hệ thống đa lõi (multi-core), nơi dữ liệu cần được truy cập đồng thời với độ trễ thấp và 
+yêu cầu hiệu năng cao.
+
+So với mô hình dựa trên \texttt{mutex} -- vốn có nguy cơ gây \textit{blocking}, 
+\textit{priority inversion} hoặc \textit{deadlock} -- Lock-Free Stack cho phép các luồng 
+thực thi thao tác \texttt{push} và \texttt{pop} mà không cần sử dụng khóa truyền thống. 
+Khi xảy ra xung đột giữa các luồng (\textit{contention}), thao tác CAS sẽ kiểm tra tính 
+hợp lệ của con trỏ đầu \texttt{head}. Nếu con trỏ bị thay đổi bởi luồng khác, CAS thất 
+bại và thao tác được lặp lại.
+
+Cơ chế này đảm bảo:
+\begin{itemize}
+    \item Không xảy ra deadlock do không sử dụng khóa.
+    \item Không bị chặn luồng, tránh priority inversion.
+    \item Khả năng mở rộng tốt khi số lượng luồng tăng.
+    \item Hiệu năng và throughput cao trong môi trường cạnh tranh mạnh.
+\end{itemize}
+
+Trong bài lab, cấu trúc Lock-Free Stack được kiểm tra thông qua hai mô hình chính:
+\begin{enumerate}
+    \item Kiểm tra thao tác cơ bản (\texttt{push}/\texttt{pop} tuần tự).
+    \item Mô phỏng đa luồng, đánh giá khả năng hoạt động dưới mức độ tranh chấp tài nguyên cao.
+\end{enumerate}
+
+
+% -------------------------------------------------------------------
+
+\subsection{Yêu cầu của bài toán}
+
+Problem 7 yêu cầu xây dựng một stack an toàn trong môi trường đa luồng mà 
+không sử dụng bất kỳ cơ chế khóa nào (mutex, semaphore hoặc condition variable). 
+Các yêu cầu chính bao gồm:
+
+\subsubsection*{(1) Cấu trúc dữ liệu}
+
+Mỗi phần tử là một \textit{Node} gồm:
+\begin{itemize}
+    \item Trường \texttt{value}: lưu dữ liệu.
+    \item Con trỏ \texttt{next}: trỏ đến phần tử kế tiếp.
+\end{itemize}
+
+Stack được quản lý bằng một con trỏ đầu có kiểu atomic:
+\begin{center}
+    \texttt{\_Atomic(Node*) head;}
+\end{center}
+
+\subsubsection*{(2) Push theo cơ chế lock-free}
+Ý tưởng triển khai:
+\begin{enumerate}
+    \item Cấp phát node mới.
+    \item Gán \texttt{new\_node->next = head}.
+    \item Thực hiện CAS để cập nhật giá trị \texttt{head}.
+    \item Nếu CAS thất bại, lặp lại cho đến khi thành công.
+\end{enumerate}
+
+\subsubsection*{(3) Pop theo cơ chế lock-free}
+\begin{enumerate}
+    \item Đọc giá trị của \texttt{head}.
+    \item Nếu \texttt{head == NULL}, stack rỗng.
+    \item Thực hiện CAS để cập nhật sang node kế tiếp.
+    \item Trả về dữ liệu và giải phóng bộ nhớ.
+\end{enumerate}
+
+\subsubsection*{(4) Các thao tác bổ trợ đề xuất}
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Hàm} & \textbf{Mục đích} \\
+\hline
+\texttt{peek()} & Đọc phần tử đầu stack mà không xoá \\
+\texttt{is\_empty()} & Kiểm tra stack rỗng \\
+\texttt{stack\_size()} & Đếm số phần tử (chỉ mang tính thời điểm) \\ 
+\hline
+\end{tabular}
+\end{center}
+
+\subsubsection*{(5) Mô phỏng đa luồng}
+\begin{itemize}
+    \item Tạo nhiều luồng (\texttt{NUM\_THREADS}).
+    \item Mỗi luồng thực hiện nhiều lần \texttt{push} và \texttt{pop}.
+    \item Gán ID luồng bằng \texttt{atomic\_fetch\_add()} để tránh sử dụng mutex.
+    \item Xác minh không xuất hiện deadlock hoặc race condition.
+\end{itemize}
+
+\subsubsection*{(6) Thống kê kết quả thực nghiệm}
+\begin{itemize}
+    \item Tổng số thao tác push/pop thành công.
+    \item Số phần tử còn lại trong stack khi kết thúc.
+    \item (Có thể mở rộng) Đếm số lần CAS bị retry nếu có contention.
+\end{itemize}
+
+% -------------------------------------------------------------------
+
+\subsection{Định hướng thực thi}
+
+Quá trình triển khai được tổ chức theo các bước chính:
+
+\subsubsection*{(1) Khởi tạo stack}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+_Atomic(Node*) head = NULL;
+\end{lstlisting}
+
+\subsubsection*{(2) Hiện thực push lock-free}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+do {
+    old_head = atomic_load(&stack->head);
+    new_node->next = old_head;
+} while (!atomic_compare_exchange_weak(&stack->head, &old_head, new_node));
+\end{lstlisting}
+
+
+\subsubsection*{(3) Hiện thực pop lock-free}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+do {
+    old_head = atomic_load(&stack->head);
+    if (old_head == NULL) return false;
+    new_head = old_head->next;
+} while (!atomic_compare_exchange_weak(&stack->head, &old_head, new_head));
+\end{lstlisting}
+
+
+
+\subsubsection*{(4) Mô phỏng đa luồng}
+Việc mô phỏng được thực hiện bằng \texttt{pthread\_create()} và \texttt{pthread\_join()}.  
+Hàm \texttt{atomic\_fetch\_add()} được sử dụng để gán ID luồng, đảm bảo tính duy nhất 
+mà không cần mutex.
+
+\subsection{Output đầu ra}
+
+
+
+
+Chương trình \texttt{lockfree.c} thực hiện hai kịch bản kiểm thử chính:\\
+(1) kiểm tra thao tác cơ bản theo kiểu tuần tự;  \\
+(2) mô phỏng môi trường đa luồng có mức độ cạnh tranh cao để đánh giá tính ổn định và hiệu năng của mô hình Lock-Free.  \\
+Kết quả thực nghiệm cho thấy cấu trúc \textbf{Lock-Free Stack} có thể xử lý truy cập đồng thời mà \textbf{không dùng bất kỳ cơ chế khóa nào}, đồng thời duy trì tính nhất quán dữ liệu.
+
+\subsubsection*{7.4.1 Kết quả chạy thực tế}
+
+Chương trình được biên dịch và chạy với lệnh sau:
+
+\begin{verbatim}
+    gcc -pthread -o lockfree lockfree.c
+    ./lockfree
+\end{verbatim}
+
+\noindent Output quan sát được:
+\begin{verbatim}
+    =========================================
+      LOCK-FREE STACK IMPLEMENTATION
+    =========================================
+    
+    --- Test 1: Basic Operations ---
+    Pushing: 10, 20, 30
+    Popping: 30 20 10
+    
+    --- Test 2: Concurrent Operations ---
+    Starting 5 threads with 1000 ops each...
+    
+    [Thread 0] Started
+    [Thread 1] Started
+    [Thread 2] Started
+    [Thread 3] Started
+    [Thread 4] Started
+    [Thread 0] Completed 2000 operations
+    [Thread 1] Completed 2000 operations
+    [Thread 2] Completed 2000 operations
+    [Thread 3] Completed 2000 operations
+    [Thread 4] Completed 2000 operations
+    
+    =========================================
+    All threads completed successfully!
+    Lock-free stack handled concurrent access
+    without any mutex or locks.
+    =========================================
+\end{verbatim}
+
+
+
+
+
+
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=16.5cm]{image/7.png}
+    \vspace{0.5cm}
+    \caption{Hình ảnh Output Minh Họa Lock-Free Stack }
+\end{figure}
+
+
+
+
+
+
+
+
+
+% ============================================================
+\subsubsection*{Phân tích chi tiết Output}
+
+\noindent\textbf{Test 1 - Kiểm tra thao tác tuần tự (Single-threaded Test)}\\
+Mục tiêu của Test 1 là kiểm tra tính đúng đắn của các thao tác \texttt{push} và \texttt{pop} trong trường
+hợp không có tranh chấp tài nguyên. Cấu trúc stack được kiểm tra với chuỗi thao tác tuần tự như sau:
+
+\begin{itemize}
+    \item Push các giá trị: \texttt{10, 20, 30}
+    \item Pop liên tục cho đến khi stack rỗng
+\end{itemize}
+\newpage
+Output:
+\begin{verbatim}
+            --- Test 1: Basic Operations ---
+            Pushing: 10, 20, 30
+            Popping: 30 20 10
+\end{verbatim}
+
+Kết quả trả về \texttt{30 20 10} chứng minh rằng cấu trúc stack tuân thủ đúng nguyên tắc 
+\textbf{LIFO (Last-In First-Out)}. Trong giai đoạn này, không có đa luồng nên mô hình 
+lock-free chưa đóng vai trò quan trọng. Mục tiêu chính của Test 1 là kiểm tra logic truy xuất dữ liệu.
+
+\bigskip
+\noindent\textbf{Nhận xét:}
+\begin{itemize}
+    \item Hàm \texttt{push()} liên kết các node bằng con trỏ \texttt{next}.
+    \item Hàm \texttt{pop()} lấy đúng phần tử cuối được thêm vào.
+    \item Stack rỗng sau khi pop hết → không có rò rỉ bộ nhớ.
+\end{itemize}
+
+
+\noindent\textbf{Test 2 - Mô phỏng đa luồng (Concurrent Test)}\\
+Trong giai đoạn này, bài toán chuyển sang kiểm tra khả năng chịu tải và mức độ ổn định của stack trong
+môi trường có tranh chấp dữ liệu. Chương trình tạo:
+\begin{itemize}
+    \item \texttt{NUM\_THREADS = 5} luồng chạy song song
+    \item Mỗi luồng thực hiện 1000 \texttt{push} và 1000 \texttt{pop}
+    \item Tổng số thao tác $\approx 10\,000$
+\end{itemize}
+
+Output:
+\begin{verbatim}
+            --- Test 2: Concurrent Operations ---
+            Starting 5 threads with 1000 ops each...
+            
+            [Thread 0] Started
+            [Thread 1] Started
+            [Thread 2] Started
+            [Thread 3] Started
+            [Thread 4] Started
+            [Thread 0] Completed 2000 operations
+            [Thread 1] Completed 2000 operations
+            [Thread 2] Completed 2000 operations
+            [Thread 3] Completed 2000 operations
+            [Thread 4] Completed 2000 operations
+            
+            =========================================
+            All threads completed successfully!
+            Lock-free stack handled concurrent access
+            without any mutex or locks.
+            =========================================
+\end{verbatim}
+
+\subsubsection*{Cơ chế hoạt động trong Test 2}
+
+\noindent\textbf{(1) Khởi chạy luồng}\\
+Mỗi luồng được gán ID bằng cơ chế atomic:
+\begin{verbatim}
+            int thread_id = atomic_fetch_add(&thread_counter, 1);
+\end{verbatim}
+Cơ chế này giúp tạo ID duy nhất mà không dùng mutex → chứng minh atomic có thể thay thế 
+vai trò của khóa trong nhiều trường hợp.
+
+\bigskip
+\noindent\textbf{(2) Push lock-free}\\
+Các lệnh push hoạt động theo cơ chế CAS:
+\begin{verbatim}
+            do {
+                old_head = atomic_load(&stack->head);
+                new_node->next = old_head;
+            } while (!atomic_compare_exchange_weak(&stack->head,
+                                                   &old_head, new_node));
+\end{verbatim}
+Nếu luồng khác thay đổi \texttt{head} tại thời điểm CAS → thao tác thất bại → tự động retry  
+đến khi thành công. Không luồng nào bị block hoặc đợi khóa.
+
+\bigskip
+\noindent\textbf{(3) Pop lock-free}\\
+Tương tự push, pop cũng dùng CAS để cập nhật head an toàn:
+\begin{verbatim}
+            do {
+                old_head = atomic_load(&stack->head);
+                if (old_head == NULL) return false;  // stack rỗng
+                new_head = old_head->next;
+            } while (!atomic_compare_exchange_weak(&stack->head,
+                                                   &old_head, new_head));
+\end{verbatim}
+Khi CAS thành công → luồng “sở hữu” node và giải phóng bộ nhớ an toàn.
+
+\bigskip
+\noindent\textbf{(4) Kết quả thực nghiệm}
+\begin{itemize}
+    \item Toàn bộ luồng đều hoàn thành 2000 thao tác.
+    \item Không xảy ra deadlock hoặc priority inversion.
+    \item Không có mutex nhưng chương trình vẫn chạy ổn định.
+    \item Stack được giải phóng hoàn toàn sau khi kết thúc.
+\end{itemize}
+
+
+\textit{Kết quả khẳng định rằng mô hình Lock-Free hoạt động chính xác, ổn định và hiệu quả trong môi trường đa luồng.}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

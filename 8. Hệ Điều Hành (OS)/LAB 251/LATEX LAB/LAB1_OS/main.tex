@@ -1,0 +1,292 @@
+\documentclass[a4paper]{article}
+\ProvidesPackage{bkthesis}
+\usepackage{vntex}
+\usepackage{a4wide,amssymb,epsfig,latexsym,array,hhline,fancyhdr}
+\usepackage[normalem]{ulem}
+%\usepackage{soul}
+\usepackage{setspace}
+\usepackage[makeroom]{cancel}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{multicol,longtable,amscd}
+\usepackage{diagbox}%Make diagonal lines in tables
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{alltt}
+\usepackage[framemethod=tikz]{mdframed}% For highlighting paragraph backgrounds
+\usepackage{caption,subcaption}
+\usepackage{enumitem}
+\usepackage{lastpage}
+\usepackage[lined,boxed,commentsnumbered]{algorithm2e}
+\usepackage{enumerate}
+\usepackage{color}
+\usepackage{graphicx}							% Standard graphics package
+\usepackage{array}
+\usepackage{tabularx, caption}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{rotating}
+\usepackage{graphics}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{epsfig}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{hyperref} % để tạo hyperlink
+\usepackage[T1]{fontenc}
+\usepackage{lscape} % hoặc pdflscape nếu dùng pdf output
+\usetikzlibrary{arrows,snakes,backgrounds}
+\usepackage[unicode]{hyperref}
+\hypersetup{urlcolor=blue,linkcolor=black,citecolor=black,colorlinks=true} 
+%\usepackage{pstcol} 								% PSTricks with the standard color package
+\usepackage[utf8]{inputenc}        % Hỗ trợ Unicode
+\usepackage[T5]{fontenc}           % Font tiếng Việt
+\usepackage[vietnamese]{babel}     % Ngôn ngữ tiếng Việt
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{booktabs} % cho bảng đẹp
+\usepackage[table]{xcolor} % cho tô màu
+\usepackage{array} % điều chỉnh cột
+
+
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usetikzlibrary{calc}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\fontsize{10.5pt}{15pt}\selectfont,  % Cỡ chữ vừa phải
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                                    
+    numbersep=5pt,       
+    firstnumber=1,
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    frame=none
+}
+\lstset{style=mystyle}
+%
+\tcbset{
+    myterminal/.style={
+        colback=black!5, % màu nền
+        colframe=black,  % màu viền
+        boxrule=0.5pt,   % độ dày viền
+        arc=2mm,         % bo góc
+        left=2mm, right=2mm, top=1mm, bottom=1mm,
+        fontupper=\ttfamily, % font kiểu máy đánh chữ
+    }
+}
+
+
+\setlength{\parindent}{1.5em} % <-- thụt đầu dòng
+\setlength{\parskip}{0pt}     % <-- không thêm khoảng trắng giữa các đoạn
+
+
+
+
+
+
+\usepackage[normalem]{ulem}
+
+\newtheorem{theorem}{{\bf Định lý}}
+\newtheorem{property}{{\bf Tính chất}}
+\newtheorem{proposition}{{\bf Mệnh đề}}
+\newtheorem{corollary}[proposition]{{\bf Hệ quả}}
+\newtheorem{lemma}[proposition]{{\bf Bổ đề}}
+\theoremstyle{definition}
+\newtheorem{exer}{Bài toán}
+
+\def\thesislayout{	% A4: 210 × 297
+	\geometry{
+		a4paper,
+		total={160mm,240mm},
+		left=30mm,
+		top=30mm,
+	}
+}
+\thesislayout
+
+%\usepackage{fancyhdr}
+\setlength{\headheight}{40pt}
+\pagestyle{fancy}
+\fancyhead{} % clear all header fields
+\fancyhead[L]{
+ \begin{tabular}{rl}
+    \begin{picture}(25,15)(0,0)
+    \put(0,-8){\includegraphics[width=8mm, height=8mm]{image/hcmut.png}}
+    %\put(0,-8){\epsfig{width=10mm,figure=hcmut.eps}}
+   \end{picture}&
+	%\includegraphics[width=8mm, height=8mm]{hcmut.png} & %
+	\begin{tabular}{l}
+		\textbf{\bf \ttfamily Ho Chi Minh City University of Technology (HCMUT)}\\
+		\textbf{\bf \ttfamily FACULTY OF COMPUTER SCIENCE AND ENGINEERING}
+	\end{tabular} 	
+ \end{tabular}
+}
+\fancyhead[R]{
+	\begin{tabular}{l}
+		\tiny \bf \\
+		\tiny \bf 
+	\end{tabular}  }
+\fancyfoot{} % clear all footer fields
+\fancyfoot[L]{\scriptsize \ttfamily HỆ ĐIỀU HÀNH (CO2017) \\Năm học 2025 - 2026 }
+
+\fancyfoot[R]{\scriptsize \ttfamily Trang {\thepage}/\pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\footrulewidth}{0.3pt}
+
+
+%%%
+\setcounter{secnumdepth}{4}
+\setcounter{tocdepth}{3}
+\makeatletter
+\newcounter {subsubsubsection}[subsubsection]
+\renewcommand\thesubsubsubsection{\thesubsubsection .\@alph\c@subsubsubsection}
+\newcommand\subsubsubsection{\@startsection{subsubsubsection}{4}{\z@}%
+                                     {-3.25ex\@plus -1ex \@minus -.2ex}%
+                                     {1.5ex \@plus .2ex}%
+                                     {\normalfont\normalsize\bfseries}}
+\newcommand*\l@subsubsubsection{\@dottedtocline{3}{10.0em}{4.1em}}
+\newcommand*{\subsubsubsectionmark}[1]{}
+\makeatother
+
+% \everymath{\color{blue}}
+%make in-line maths symbols blue to read/check easily
+
+
+\sloppy
+\captionsetup[figure]{labelfont={small,bf},textfont={small,it},belowskip=-1pt,aboveskip=-9pt}
+%space remove between caption, figure, and text
+\captionsetup[table]{labelfont={small,bf},textfont={small,it},belowskip=-1pt,aboveskip=7pt}
+%space remove between caption, table, and text
+
+%\floatplacement{figure}{H}%forced here float placement automatically for figures
+%\floatplacement{table}{H}%forced here float placement automatically for table
+%the following settings (11 lines) are to remove white space before or after the figures and tables
+%\setcounter{topnumber}{2}
+%\setcounter{bottomnumber}{2}
+%\setcounter{totalnumber}{4}
+%\renewcommand{\topfraction}{0.85}
+%\renewcommand{\bottomfraction}{0.85}
+%\renewcommand{\textfraction}{0.15}
+%\renewcommand{\floatpagefraction}{0.8}
+%\renewcommand{\textfraction}{0.1}
+\setlength{\floatsep}{5pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{5pt plus 2pt minus 2pt}
+\setlength{\intextsep}{10pt plus 2pt minus 2pt}
+
+\thesislayout
+
+\begin{document}
+\onehalfspacing
+\begin{titlepage}
+\begin{center}
+\textbf{ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH \\
+TRƯỜNG ĐẠI HỌC BÁCH KHOA \\
+KHOA KHOA HỌC \& THUẬT MÁY TÍNH }
+
+\end{center}
+
+\vspace{0.3cm}
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=5cm]{image/hcmut.png}
+\end{center}
+\end{figure}
+
+
+\begin{center}
+    \bfseries\Large
+    HỆ ĐIỀU HÀNH (CO2017)
+    \rule{1.0\textwidth}{0.6pt} % gạch ngang mảnh
+    
+    \textbf{\large THỰC HÀNH 1} \\ 
+    \vspace{0.1cm}
+    \textbf{\Large GIỚI THIỆU TỔNG QUAN VỀ LẬP TRÌNH TRÊN HỆ ĐIỀU HÀNH LINUX} 
+    \rule{1.0\textwidth}{0.6pt}
+\end{center}
+\vspace{1cm}
+
+
+\begin{center}
+    {\fontsize{15}{12}\selectfont\bfseries % 13pt size, 15pt line spacing
+    Lớp: L02 -- Học Kỳ HK251 \\
+    Ngày nộp: 14/10/2025 \par}
+    \vspace{2cm}
+    {\fontsize{14}{12}\selectfont\bfseries
+    GVHD: Thầy Nguyễn Minh Tâm}
+\end{center}
+
+% DANH SÁCH NHÓM
+\begin{center}
+{\fontsize{13}{14}\selectfont % Cỡ chữ 12pt, khoảng cách dòng 14pt
+\begin{tabular}{|>{\centering\arraybackslash}p{7cm}|>{\centering\arraybackslash}p{4cm}|}
+\hline
+\textbf{Sinh Viên} & \textbf{MSSV} \\
+\hline
+
+Phạm Công Võ & 2313946 \\
+
+\hline
+
+\end{tabular}
+}
+\end{center}
+
+
+\vspace{3cm}
+\begin{center}
+{\footnotesize \hspace{1cm} \large Thành Phố Hồ Chí Minh, Tháng 10/2025}
+\end{center}
+\end{titlepage}
+
+
+%\thispagestyle{empty}
+%%
+
+
+%%
+
+\newpage
+
+
+
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+% -	Lời cảm ơn/ Lời ngỏ
+
+
+
+\input{content/intro}
+\input{content/theory}
+\input{content/app-design}
+\input{content/setup}
+\input{content/app-final}
+
+
+\newpage
+
+\addcontentsline{toc}{section}{\large Tài liệu tham khảo}
+\begin{thebibliography}{99999}
+
+
+
+\end{thebibliography}
+\end{document}

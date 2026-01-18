@@ -1,0 +1,351 @@
+<svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg">
+  <!-- Định nghĩa styles -->
+  <defs>
+    <!-- Gradient màu xanh tím đậm cho ESP32 -->
+    <linearGradient id="esp32Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Gradient xanh lá cho Input -->
+    <linearGradient id="inputGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#11998e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#38ef7d;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Gradient xanh dương cho Output -->
+    <linearGradient id="outputGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4facfe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00f2fe;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Gradient cam đỏ cho Alert -->
+    <linearGradient id="alertGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f093fb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f5576c;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Shadow mạnh hơn -->
+    <filter id="shadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="0" dy="3" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.35"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Glow effect -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Arrow markers -->
+    <marker id="arrowGreen" markerWidth="12" markerHeight="12" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 12 3.5, 0 7" fill="#38ef7d"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 12 3.5, 0 7" fill="#00f2fe"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="12" markerHeight="12" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 12 3.5, 0 7" fill="#764ba2"/>
+    </marker>
+  </defs>
+  
+  <!-- Background pattern -->
+  <rect width="1200" height="900" fill="#f8fafc"/>
+  
+  <!-- Title với icon -->
+  <g filter="url(#glow)">
+    <text x="600" y="50" font-family="'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" text-anchor="middle" fill="#1e293b">
+      ⚡ SƠ ĐỒ KHỐI HỆ THỐNG SMART CLOCK
+    </text>
+  </g>
+  
+  <!-- ==================== ESP32 CENTER (Lớn hơn, nổi bật) ==================== -->
+  <g filter="url(#shadow)">
+    <!-- Outer glow circle -->
+    <circle cx="600" cy="450" r="180" fill="url(#esp32Grad)" opacity="0.1"/>
+    
+    <!-- Main circle -->
+    <circle cx="600" cy="450" r="150" fill="url(#esp32Grad)" stroke="#5a67d8" stroke-width="4"/>
+    
+    <!-- Inner decorative circle -->
+    <circle cx="600" cy="450" r="130" fill="none" stroke="white" stroke-width="2" opacity="0.3" stroke-dasharray="5,5"/>
+    
+    <!-- Icon chip -->
+    <g transform="translate(600, 420)">
+      <rect x="-25" y="-25" width="50" height="50" rx="5" fill="white" opacity="0.2"/>
+      <text x="0" y="10" font-size="40" text-anchor="middle" fill="white">⚙️</text>
+    </g>
+    
+    <!-- Title -->
+    <text x="600" y="505" font-family="'Segoe UI', Arial, sans-serif" font-size="20" font-weight="700" text-anchor="middle" fill="white">
+      VI ĐIỀU KHIỂN
+    </text>
+    <text x="600" y="530" font-family="'Segoe UI', Arial, sans-serif" font-size="24" font-weight="800" text-anchor="middle" fill="white">
+      ESP32
+    </text>
+    
+    <!-- Specs -->
+    <text x="600" y="555" font-family="'Segoe UI', Arial, sans-serif" font-size="11" text-anchor="middle" fill="white" opacity="0.9">
+      Dual-Core 240MHz • Timer 64-bit • GPIO/I2C/SPI
+    </text>
+  </g>
+  
+  <!-- ==================== LEFT SIDE - INPUT BLOCKS ==================== -->
+  
+  <!-- Button Block -->
+  <g filter="url(#shadow)" transform="translate(100, 150)">
+    <rect x="0" y="0" width="200" height="120" rx="12" fill="url(#inputGrad)" stroke="#11998e" stroke-width="3"/>
+    
+    <!-- Icon circle -->
+    <circle cx="100" cy="35" r="18" fill="white" opacity="0.25"/>
+    <text x="100" y="45" font-family="'Segoe UI', Arial, sans-serif" font-size="24" text-anchor="middle" fill="white">🎮</text>
+    
+    <text x="100" y="70" font-family="'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="white">
+      NÚT NHẤN
+    </text>
+    <text x="100" y="90" font-family="'Segoe UI', Arial, sans-serif" font-size="11" text-anchor="middle" fill="white" opacity="0.9">
+      MODE • SET • INC
+    </text>
+    <text x="100" y="108" font-family="'Segoe UI', Arial, sans-serif" font-size="10" text-anchor="middle" fill="white" opacity="0.8">
+      GPIO 16, 17, 5
+    </text>
+  </g>
+  
+  <!-- DHT11 Block -->
+  <g filter="url(#shadow)" transform="translate(100, 300)">
+    <rect x="0" y="0" width="200" height="120" rx="12" fill="url(#inputGrad)" stroke="#11998e" stroke-width="3"/>
+    
+    <circle cx="100" cy="35" r="18" fill="white" opacity="0.25"/>
+    <text x="100" y="45" font-family="'Segoe UI', Arial, sans-serif" font-size="24" text-anchor="middle" fill="white">🌡️</text>
+    
+    <text x="100" y="70" font-family="'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="white">
+      CẢM BIẾN DHT11
+    </text>
+    <text x="100" y="90" font-family="'Segoe UI', Arial, sans-serif" font-size="11" text-anchor="middle" fill="white" opacity="0.9">
+      Nhiệt độ & Độ ẩm
+    </text>
+    <text x="100" y="108" font-family="'Segoe UI', Arial, sans-serif" font-size="10" text-anchor="middle" fill="white" opacity="0.8">
+      1-Wire • GPIO 27
+    </text>
+  </g>
+  
+  <!-- RTC Block -->
+  <g filter="url(#shadow)" transform="translate(100, 450)">
+    <rect x="0" y="0" width="200" height="120" rx="12" fill="url(#inputGrad)" stroke="#11998e" stroke-width="3"/>
+    
+    <circle cx="100" cy="35" r="18" fill="white" opacity="0.25"/>
+    <text x="100" y="45" font-family="'Segoe UI', Arial, sans-serif" font-size="24" text-anchor="middle" fill="white">⏰</text>
+    
+    <text x="100" y="70" font-family="'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="white">
+      RTC DS3231
+    </text>
+    <text x="100" y="90" font-family="'Segoe UI', Arial, sans-serif" font-size="11" text-anchor="middle" fill="white" opacity="0.9">
+      Real Time Clock
+    </text>
+    <text x="100" y="108" font-family="'Segoe UI', Arial, sans-serif" font-size="10" text-anchor="middle" fill="white" opacity="0.8">
+      I2C • SDA:21 SCL:22
+    </text>
+  </g>
+  
+  <!-- Power Block -->
+  <g filter="url(#shadow)" transform="translate(100, 600)">
+    <rect x="0" y="0" width="200" height="100" rx="12" fill="#64748b" stroke="#475569" stroke-width="3"/>
+    
+    <circle cx="100" cy="30" r="16" fill="white" opacity="0.25"/>
+    <text x="100" y="40" font-family="'Segoe UI', Arial, sans-serif" font-size="24" text-anchor="middle" fill="white">🔋</text>
+    
+    <text x="100" y="65" font-family="'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="white">
+      NGUỒN ĐIỆN
+    </text>
+    <text x="100" y="85" font-family="'Segoe UI', Arial, sans-serif" font-size="11" text-anchor="middle" fill="white" opacity="0.9">
+      5V USB / Adapter
+    </text>
+  </g>
+  
+  <!-- ==================== RIGHT SIDE - OUTPUT BLOCKS ==================== -->
+  
+  <!-- LED 7-Segment -->
+  <g filter="url(#shadow)" transform="translate(900, 150)">
+    <rect x="0" y="0" width="200" height="120" rx="12" fill="url(#outputGrad)" stroke="#4facfe" stroke-width="3"/>
+    
+    <circle cx="100" cy="35" r="18" fill="white" opacity="0.25"/>
+    <text x="100" y="45" font-family="'Segoe UI', Arial, sans-serif" font-size="24" text-anchor="middle" fill="white">🔢</text>
+    
+    <text x="100" y="70" font-family="'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="white">
+      LED 7-SEGMENT
+    </text>
+    <text x="100" y="90" font-family="'Segoe UI', Arial, sans-serif" font-size="11" text-anchor="middle" fill="white" opacity="0.9">
+      MAX7219 • 8 digits
+    </text>
+    <text x="100" y="108" font-family="'Segoe UI', Arial, sans-serif" font-size="10" text-anchor="middle" fill="white" opacity="0.8">
+      SPI • DIN:13 CLK:14 CS:12
+    </text>
+  </g>
+  
+  <!-- LCD 16x2 -->
+  <g filter="url(#shadow)" transform="translate(900, 300)">
+    <rect x="0" y="0" width="200" height="120" rx="12" fill="url(#outputGrad)" stroke="#4facfe" stroke-width="3"/>
+    
+    <circle cx="100" cy="35" r="18" fill="white" opacity="0.25"/>
+    <text x="100" y="45" font-family="'Segoe UI', Arial, sans-serif" font-size="24" text-anchor="middle" fill="white">📺</text>
+    
+    <text x="100" y="70" font-family="'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="white">
+      LCD 16x2 I2C
+    </text>
+    <text x="100" y="90" font-family="'Segoe UI', Arial, sans-serif" font-size="11" text-anchor="middle" fill="white" opacity="0.9">
+      Display chi tiết
+    </text>
+    <text x="100" y="108" font-family="'Segoe UI', Arial, sans-serif" font-size="10" text-anchor="middle" fill="white" opacity="0.8">
+      I2C 0x27 • SDA:21 SCL:22
+    </text>
+  </g>
+  
+  <!-- Buzzer -->
+  <g filter="url(#shadow)" transform="translate(900, 450)">
+    <rect x="0" y="0" width="200" height="100" rx="12" fill="url(#alertGrad)" stroke="#f5576c" stroke-width="3"/>
+    
+    <circle cx="100" cy="30" r="16" fill="white" opacity="0.25"/>
+    <text x="100" y="40" font-family="'Segoe UI', Arial, sans-serif" font-size="24" text-anchor="middle" fill="white">🔊</text>
+    
+    <text x="100" y="65" font-family="'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="white">
+      BUZZER
+    </text>
+    <text x="100" y="85" font-family="'Segoe UI', Arial, sans-serif" font-size="11" text-anchor="middle" fill="white" opacity="0.9">
+      Báo động • GPIO 32
+    </text>
+  </g>
+  
+  <!-- LED Indicator -->
+  <g filter="url(#shadow)" transform="translate(900, 580)">
+    <rect x="0" y="0" width="200" height="100" rx="12" fill="url(#alertGrad)" stroke="#f5576c" stroke-width="3"/>
+    
+    <circle cx="100" cy="30" r="16" fill="white" opacity="0.25"/>
+    <text x="100" y="40" font-family="'Segoe UI', Arial, sans-serif" font-size="24" text-anchor="middle" fill="white">💡</text>
+    
+    <text x="100" y="65" font-family="'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="white">
+      LED INDICATOR
+    </text>
+    <text x="100" y="85" font-family="'Segoe UI', Arial, sans-serif" font-size="11" text-anchor="middle" fill="white" opacity="0.9">
+      Trạng thái • GPIO 33
+    </text>
+  </g>
+  
+  <!-- ==================== ARROWS WITH LABELS ==================== -->
+  
+  <!-- Buttons to ESP32 -->
+  <g>
+    <path d="M 300 210 Q 400 210, 460 380" stroke="#38ef7d" stroke-width="3.5" fill="none" marker-end="url(#arrowGreen)" opacity="0.8"/>
+    <rect x="345" y="270" width="80" height="24" rx="12" fill="white" stroke="#38ef7d" stroke-width="2"/>
+    <text x="385" y="286" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#11998e">
+      Digital In
+    </text>
+  </g>
+  
+  <!-- DHT11 to ESP32 -->
+  <g>
+    <path d="M 300 360 Q 400 360, 470 420" stroke="#38ef7d" stroke-width="3.5" fill="none" marker-end="url(#arrowGreen)" opacity="0.8"/>
+    <rect x="350" y="370" width="70" height="24" rx="12" fill="white" stroke="#38ef7d" stroke-width="2"/>
+    <text x="385" y="386" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#11998e">
+      1-Wire
+    </text>
+  </g>
+  
+  <!-- RTC to ESP32 -->
+  <g>
+    <path d="M 300 510 L 450 460" stroke="#38ef7d" stroke-width="3.5" fill="none" marker-end="url(#arrowGreen)" opacity="0.8"/>
+    <rect x="345" y="465" width="50" height="24" rx="12" fill="white" stroke="#38ef7d" stroke-width="2"/>
+    <text x="370" y="481" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#11998e">
+      I2C
+    </text>
+  </g>
+  
+  <!-- Power to ESP32 -->
+  <g>
+    <path d="M 300 650 Q 400 550, 480 520" stroke="#64748b" stroke-width="3.5" fill="none" marker-end="url(#arrowPurple)" opacity="0.6" stroke-dasharray="8,4"/>
+    <rect x="360" y="570" width="60" height="24" rx="12" fill="white" stroke="#64748b" stroke-width="2"/>
+    <text x="390" y="586" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#475569">
+      5V/3.3V
+    </text>
+  </g>
+  
+  <!-- ESP32 to LED 7-Segment -->
+  <g>
+    <path d="M 740 380 Q 820 280, 900 210" stroke="#00f2fe" stroke-width="3.5" fill="none" marker-end="url(#arrowBlue)" opacity="0.8"/>
+    <rect x="770" y="270" width="50" height="24" rx="12" fill="white" stroke="#00f2fe" stroke-width="2"/>
+    <text x="795" y="286" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#4facfe">
+      SPI
+    </text>
+  </g>
+  
+  <!-- ESP32 to LCD -->
+  <g>
+    <path d="M 730 420 Q 820 360, 900 360" stroke="#00f2fe" stroke-width="3.5" fill="none" marker-end="url(#arrowBlue)" opacity="0.8"/>
+    <rect x="780" y="370" width="50" height="24" rx="12" fill="white" stroke="#00f2fe" stroke-width="2"/>
+    <text x="805" y="386" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#4facfe">
+      I2C
+    </text>
+  </g>
+  
+  <!-- ESP32 to Buzzer -->
+  <g>
+    <path d="M 730 470 Q 820 490, 900 500" stroke="#f5576c" stroke-width="3.5" fill="none" marker-end="url(#arrowBlue)" opacity="0.8"/>
+    <rect x="780" y="470" width="60" height="24" rx="12" fill="white" stroke="#f5576c" stroke-width="2"/>
+    <text x="810" y="486" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#f5576c">
+      PWM
+    </text>
+  </g>
+  
+  <!-- ESP32 to LED -->
+  <g>
+    <path d="M 710 540 Q 800 580, 900 630" stroke="#f5576c" stroke-width="3.5" fill="none" marker-end="url(#arrowBlue)" opacity="0.8"/>
+    <rect x="760" y="570" width="60" height="24" rx="12" fill="white" stroke="#f5576c" stroke-width="2"/>
+    <text x="790" y="586" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" text-anchor="middle" fill="#f5576c">
+      GPIO
+    </text>
+  </g>
+  
+  <!-- ==================== LEGEND ==================== -->
+  <g transform="translate(150, 760)">
+    <rect x="0" y="0" width="900" height="100" rx="15" fill="white" stroke="#cbd5e0" stroke-width="2" filter="url(#shadow)"/>
+    
+    <text x="450" y="30" font-family="'Segoe UI', Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#1e293b">
+      CHÚ THÍCH
+    </text>
+    
+    <!-- Row 1 -->
+    <circle cx="50" cy="60" r="12" fill="url(#inputGrad)"/>
+    <text x="75" y="65" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#334155">
+      Khối đầu vào (Input)
+    </text>
+    
+    <circle cx="250" cy="60" r="12" fill="url(#outputGrad)"/>
+    <text x="275" y="65" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#334155">
+      Khối đầu ra (Output)
+    </text>
+    
+    <circle cx="450" cy="60" r="12" fill="url(#alertGrad)"/>
+    <text x="475" y="65" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#334155">
+      Khối cảnh báo (Alert)
+    </text>
+    
+    <circle cx="670" cy="60" r="12" fill="url(#esp32Grad)"/>
+    <text x="695" y="65" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#334155">
+      Vi điều khiển (MCU)
+    </text>
+  </g>
+  
+  <!-- Footer note -->
+  <text x="600" y="885" font-family="'Segoe UI', Arial, sans-serif" font-size="11" text-anchor="middle" fill="#64748b" font-style="italic">
+    Hệ thống tích hợp: Hiển thị • Đo lường • Báo động • Tương tác người dùng
+  </text>
+</svg>

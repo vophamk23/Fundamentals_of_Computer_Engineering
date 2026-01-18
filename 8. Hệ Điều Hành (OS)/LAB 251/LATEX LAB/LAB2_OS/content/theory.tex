@@ -1,0 +1,1191 @@
+
+\section{PROBLEM 1}
+
+\subsection{Mô tả bài toán}
+
+$\indent$Mục tiêu của bài tập là xây dựng một chương trình có khả năng tính toán điểm trung bình của các bộ phim dựa trên một tập dữ liệu lớn, đồng thời ứng dụng cơ chế giao tiếp liên tiến trình (Inter-Process Communication – IPC) thông qua \textbf{bộ nhớ dùng chung} (Shared Memory).
+
+Tập dữ liệu đầu vào gồm 100.000 lượt đánh giá, được thực hiện bởi 943 người dùng cho 1.682 bộ phim khác nhau.  
+Mỗi dòng dữ liệu có cấu trúc như sau:
+
+\begin{verbatim}
+                    userID <tab> movieID <tab> rating <tab> timeStamp
+\end{verbatim}
+
+\noindent \textbf{Ví dụ:}
+\begin{verbatim}
+    196	    242	    3	  881250949
+    186	    302	    3	  891717742
+    22	     377	    1	  878887116
+    244	    51	     2	  880606923
+    166	    346	    1	  886397596
+    298	    474	    4	  884182806
+    115	    265	    2	  881171488
+    253	    465	    5	  891628467
+    ......
+\end{verbatim}
+
+Để mô phỏng quá trình xử lý song song dữ liệu lớn, tập dữ liệu được chia thành hai tệp:
+\begin{itemize}
+    \item \fcolorbox{black}{gray!10}{\ttfamily\textbf{movie-100k\_1.txt}}
+    \item \fcolorbox{black}{gray!10}{\ttfamily\textbf{movie-100k\_2.txt}}
+\end{itemize}
+
+Chương trình sẽ tạo ra hai tiến trình con (child processes), mỗi tiến trình chịu trách nhiệm đọc một tệp dữ liệu riêng, tính toán tổng điểm (Total Ratings) và số lượt đánh giá (Count) cho từng bộ phim.  
+Kết quả tính toán của mỗi tiến trình được ghi vào vùng bộ nhớ dùng chung (Shared Memory), nơi tiến trình cha (Parent Process) sẽ thu thập, tổng hợp và hiển thị kết quả cuối cùng ra màn hình.
+
+\subsection{Cách thức thực hiện}
+
+\subsubsection*{Bước 1: Khởi tạo vùng bộ nhớ dùng chung (Shared Memory Segment)}
+
+$\indent$Tiến trình cha gọi hệ thống \texttt{shmget()} để khởi tạo một vùng bộ nhớ chia sẻ có kích thước đủ lớn nhằm lưu trữ thông tin của toàn bộ 1.682 bộ phim.  
+Mỗi phần tử trong vùng nhớ này tương ứng với một bộ phim và bao gồm các trường dữ liệu:
+
+\begin{itemize}
+    \item \textbf{movieID:} Mã định danh duy nhất của bộ phim.
+    \item \textbf{totalRatings:} Tổng điểm đánh giá của bộ phim từ tất cả người dùng.
+    \item \textbf{count:} Số lượt đánh giá mà bộ phim nhận được.
+    \item \textbf{average:} Điểm trung bình của bộ phim (được tính sau khi hai tiến trình con hoàn thành công việc).
+\end{itemize}
+
+\subsubsection*{Bước 2: Tạo và thực thi hai tiến trình con}
+
+$\indent$Tiến trình cha sử dụng hàm \texttt{fork()} để tạo ra hai tiến trình con song song:
+\begin{itemize}
+    \item \textbf{Child 1:} Đọc và xử lý dữ liệu trong \texttt{movie-100k\_1.txt}.
+    \item \textbf{Child 2:} Đọc và xử lý dữ liệu trong \texttt{movie-100k\_2.txt}.
+\end{itemize}
+
+Mỗi tiến trình con thực hiện các thao tác sau:
+\begin{enumerate}
+    \item Mở tệp dữ liệu được chỉ định.
+    \item Đọc từng dòng dữ liệu và tách các giá trị \texttt{movieID} và \texttt{rating}.
+    \item Cộng dồn giá trị \texttt{rating} vào \texttt{totalRatings[movieID]}.
+    \item Tăng biến đếm \texttt{count[movieID]} thêm 1.
+    \item Ghi kết quả tạm thời vào vùng \texttt{Shared Memory} để tiến trình cha có thể truy cập.
+\end{enumerate}
+
+Nhờ đó, hai tiến trình con có thể \textbf{xử lý dữ liệu song song}, giúp tăng hiệu quả và rút ngắn thời gian tính toán.
+
+\subsubsection*{Bước 3: Tổng hợp và hiển thị kết quả}
+
+$\indent$Sau khi cả hai tiến trình con hoàn tất (được xác nhận thông qua hàm \texttt{wait()}), tiến trình cha sẽ:
+\begin{enumerate}
+    \item Truy cập vùng Shared Memory để đọc dữ liệu tổng hợp từ hai tiến trình con.
+    \item Tính điểm trung bình cho từng bộ phim theo công thức:
+    \[
+        \text{average[movieID]} = 
+        \frac{\text{totalRatings[movieID]}}{\text{count[movieID]}}
+    \]
+    \item Tính điểm trung bình toàn hệ thống (overall average):
+    \[
+        \text{overallAverage} =
+        \frac{\sum \text{totalRatings}}{\sum \text{count}}
+    \]
+    \item Hiển thị kết quả cuối cùng ra màn hình dưới dạng bảng thống kê.
+\end{enumerate}
+
+\begin{table}[h!]
+\centering
+\caption{\textbf{Ý nghĩa các trường dữ liệu trong kết quả đầu ra}}
+\vspace{0.3em}
+\renewcommand{\arraystretch}{1.4} % Tăng khoảng cách giữa các dòng
+\setlength{\tabcolsep}{12pt} % Tăng khoảng cách giữa các cột
+\begin{tabular}{|c|p{9cm}|}
+\hline
+\rowcolor[gray]{0.9} 
+\textbf{Trường dữ liệu} & \textbf{Ý nghĩa} \\ \hline
+\textbf{MovieID} & Mã định danh duy nhất của bộ phim. \\ \hline
+\textbf{Total Ratings} & Tổng số điểm đánh giá mà bộ phim nhận được từ tất cả người dùng. \\ \hline
+\textbf{Count} & Số lượt đánh giá hợp lệ mà bộ phim nhận được. \\ \hline
+\textbf{Average} & Điểm trung bình của bộ phim, được tính theo công thức:
+\[
+\text{Average} = \frac{\text{Total Ratings}}{\text{Count}}
+\]
+\\ \hline
+\end{tabular}
+\end{table}
+
+\newpage
+\subsection{Hình Ảnh Kết Quả Đầu Ra}
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=10cm]{image/1aa.png}
+    \vspace{0.5cm}
+    \caption{Thông tin tiến trình và quá trình xử lý}
+\end{figure}
+
+Ngay khi chương trình bắt đầu, tiến trình cha (\texttt{Parent}) khởi tạo một vùng bộ nhớ dùng chung (\textit{Shared Memory}) và sau đó tạo ra hai tiến trình con (\texttt{Child 1} và \texttt{Child 2}).  
+Ba tiến trình này cùng tham gia vào quá trình tính toán, nhưng mỗi tiến trình đảm nhận một vai trò khác nhau:
+
+\begin{itemize}
+    \item \textbf{Parent - PID 680:}  
+    Là tiến trình cha. Nhiệm vụ chính là khởi tạo vùng \textit{Shared Memory}, tạo hai tiến trình con, chờ cả hai hoàn tất công việc, rồi đọc dữ liệu đã tổng hợp để in bảng thống kê.
+    
+    \item \textbf{Child 1 - PID 681:}  
+    Đọc tệp dữ liệu \texttt{movie-100k\_1.txt}.  
+    Khi gặp dòng có \texttt{movieID = 1}, tiến trình này sẽ tăng giá trị \texttt{sum\_ratings} và \texttt{count} của phim 1 trong vùng nhớ dùng chung.
+    
+    \item \textbf{Child 2 - PID 682:}  
+    Đọc tệp dữ liệu \texttt{movie-100k\_2.txt}.  
+    Nếu dòng có \texttt{movieID = 1}, tiến trình sẽ tiếp tục cộng dồn điểm và số lượt đánh giá vào đúng vị trí của phim 1 trong \textit{Shared Memory}.
+\end{itemize}
+
+\noindent Cả hai tiến trình con đều truy cập cùng vùng nhớ chung. Để tránh \textit{race condition}, chương trình sử dụng cơ chế khóa đơn giản thông qua hai hàm:
+\begin{lstlisting}
+acquire_lock()
+release_lock()
+\end{lstlisting}
+
+\noindent Khi đọc và xử lý dữ liệu, chương trình hiển thị thông báo tiến độ:
+
+\begin{lstlisting}
+Progress: 10000 lines processed...
+\end{lstlisting}
+
+\noindent Khi hoàn tất đọc tệp:
+
+\begin{lstlisting}
+Completed: Read 50177 lines
+Completed: Read 49823 lines
+\end{lstlisting}
+
+\noindent Sau khi cả hai tiến trình con kết thúc (\texttt{Child 1 finished}, \texttt{Child 2 finished}), tiến trình cha tổng hợp dữ liệu từ vùng nhớ dùng chung.  
+
+
+\newpage
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=15cm]{image/1a.png}
+\end{figure}
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=15cm]{image/1b.png}
+\end{figure}
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=15cm]{image/1c.png}
+\end{figure}
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=15cm]{image/1d.png}
+\end{figure}
+
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=15cm]{image/1e.png}
+\end{figure}
+\begin{center}
+\textbf{. . . . . . . . . . . . . . . . . . . . . . . . . . . . .  . }
+\end{center}
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=14cm]{image/1g.png}
+    \vspace{0.5cm}
+    \caption{Bảng “MOVIE AVERAGE RATINGS}
+\end{figure}
+
+\newpage
+
+\subsection*{\hspace{0.5cm}Phân tích bảng kết quả “MOVIE AVERAGE RATINGS”}
+
+$\indent$Bảng kết quả hiển thị danh sách các bộ phim kèm theo thông tin về điểm đánh giá của người xem.  
+Đây là kết quả cuối cùng mà chương trình in ra sau khi hai tiến trình con đã hoàn tất việc xử lý \textbf{100.000 dòng dữ liệu}  
+và tiến trình cha đã tổng hợp dữ liệu từ vùng nhớ dùng chung (\textit{Shared Memory}).
+
+Bảng gồm bốn cột chính, mỗi cột mang một ý nghĩa cụ thể như sau:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|c|c|p{9cm}|}
+\hline
+\textbf{Cột} & \textbf{Tên đại lượng} & \textbf{Giải thích ý nghĩa} \\
+\hline
+\textbf{MovieID} & Mã định danh phim & Là số thứ tự duy nhất đại diện cho từng bộ phim trong hệ thống (từ 1 đến 1682). Mỗi bộ phim chỉ có một mã ID duy nhất. \\
+\hline
+\textbf{Total Ratings} & Tổng điểm đánh giá & Là tổng cộng tất cả các điểm (rating) mà người dùng đã chấm cho bộ phim đó, được tổng hợp từ hai tệp dữ liệu \texttt{movie-100k\_1.txt} và \texttt{movie-100k\_2.txt}. \\
+\hline
+\textbf{Count} & Số lượt đánh giá & Biểu thị số lần (hoặc số người dùng) đã chấm điểm cho bộ phim đó. \\
+\hline
+\textbf{Average} & Điểm trung bình & Được tính theo công thức:
+\[
+\text{Average} = \frac{\text{Total Ratings}}{\text{Count}}
+\]
+Đây là mức điểm trung bình phản ánh mức độ yêu thích của khán giả đối với bộ phim. \\
+\hline
+\end{tabular}
+\caption{Ý nghĩa các cột trong bảng kết quả Movie Average Ratings}
+\end{table}
+
+\subsubsection*{\hspace{0.5cm}Ví dụ minh họa - Phim số 1}
+$\indent$Dòng đầu tiên trong bảng kết quả thể hiện thông tin về bộ phim có \textbf{MovieID = 1} như sau:
+
+\begin{center}
+\large\texttt{1 \quad 1753 \quad 452 \quad 3.8783}
+\end{center}
+
+\noindent
+Phân tích chi tiết từng đại lượng:
+
+\vspace{0.3em}
+\noindent
+\textbf{• MovieID:} \\
+\quad \textbf{1} -- là mã định danh của bộ phim đầu tiên trong danh sách gồm 1\,682 phim.  
+Mỗi bộ phim chỉ có một mã số duy nhất dùng để nhận dạng trong toàn bộ hệ thống dữ liệu.
+
+\vspace{0.5em}
+\noindent
+\textbf{• Total Ratings:} \\
+\quad \textbf{1753} -- là tổng điểm mà tất cả người dùng đã chấm cho bộ phim này.  
+Ví dụ: nếu có các lượt đánh giá 4, 5, 3, \ldots thì chương trình sẽ cộng dồn tất cả lại để thu được giá trị tổng là 1753.
+
+\vspace{0.5em}
+\noindent
+\textbf{• Count:} \\
+\quad \textbf{452} -- là số lượt đánh giá, tương ứng với 452 người dùng khác nhau đã chấm điểm cho bộ phim số 1.
+
+\vspace{0.5em}
+\noindent
+\textbf{• Average:} \\
+\quad \textbf{3.8783} -- là điểm trung bình của phim, được tính theo công thức:
+\[
+\text{Average} = \frac{\text{Total Ratings}}{\text{Count}} 
+               = \frac{1753}{452} 
+               = 3.8783
+\]
+Giá trị này phản ánh mức độ yêu thích trung bình của khán giả đối với bộ phim.
+
+
+\textbf{\hspace{0.5cm}Nhận xét:}
+
+$\indent$Điểm trung bình \textbf{3.8783/5} cho thấy phim số 1 được đánh giá khá cao và nằm trong nhóm những bộ phim được yêu thích nhất trong tập dữ liệu.  
+Nói cách khác, nếu cộng tất cả 452 lượt đánh giá lại, trung bình mỗi người dùng chấm khoảng \textbf{3.88 trên thang điểm 5}, thể hiện mức độ hài lòng tích cực của người xem.
+
+\subsubsection*{\hspace{0.5cm}Ví dụ minh họa - Phim số 2}
+
+$\indent$Dòng thứ hai trong bảng kết quả thể hiện thông tin về bộ phim có \textbf{MovieID = 2} như sau:
+
+\begin{center}
+\large\texttt{2 \quad 420 \quad 131 \quad 3.2061}
+\end{center}
+
+\noindent
+Phân tích chi tiết từng đại lượng:
+
+\vspace{0.3em}
+\noindent
+\textbf{• MovieID:} \\
+\quad \textbf{2} -- là mã định danh duy nhất của bộ phim thứ hai trong danh sách gồm 1\,682 phim.  
+Giá trị này giúp hệ thống xác định chính xác phim cần tính toán và tổng hợp dữ liệu đánh giá.
+
+\vspace{0.5em}
+\noindent
+\textbf{• Total Ratings:} \\
+\quad \textbf{420} -- là tổng điểm mà tất cả người dùng đã chấm cho bộ phim này.  
+Ví dụ: nếu có người đánh giá 4, 3, 5, \ldots thì tổng cộng các giá trị đó lại được 420 điểm.
+
+\vspace{0.5em}
+\noindent
+\textbf{• Count:} \\
+\quad \textbf{131} -- là tổng số lượt đánh giá (tức là có 131 người dùng khác nhau) đã chấm điểm cho bộ phim số 2.  
+Số lượng này thấp hơn so với phim 1, cho thấy mức độ phổ biến của phim 2 có thể ít hơn.
+
+\vspace{0.5em}
+\noindent
+\textbf{• Average:} \\
+\quad \textbf{3.2061} -- là điểm trung bình của phim, được tính theo công thức:
+\[
+\text{Average} = \frac{\text{Total Ratings}}{\text{Count}} 
+               = \frac{420}{131} 
+               \approx 3.2061
+\]
+Điểm trung bình này cho thấy bộ phim được đánh giá ở mức \textbf{trung bình khá}, không quá cao nhưng vẫn trên ngưỡng 3/5.
+
+
+\newpage
+\section{PROBLEM 2}
+\subsection{Mô tả bài toán}
+
+Bài toán yêu cầu lập trình một chương trình tính tổng của dãy số tự nhiên liên tiếp từ 1 đến $n$, được biểu diễn dưới dạng:
+
+\[
+\text{sum}(n) = 1 + 2 + 3 + \cdots + n
+\]
+
+Đây là một bài toán cơ bản trong lập trình, tuy nhiên khi $n$ rất lớn (ví dụ $10^6$, $10^8$ hoặc hơn), việc tính toán tuần tự sẽ tiêu tốn nhiều thời gian xử lý CPU.  
+Do đó, mục tiêu đặt ra là xây dựng hai phiên bản chương trình:
+
+\begin{itemize}
+    \item \textbf{Phiên bản tuần tự (Serial Version):} chỉ sử dụng một luồng (\textit{thread}) để thực hiện phép cộng lần lượt từ 1 đến $n$.
+    \item \textbf{Phiên bản song song (Multi-thread Version):} chia bài toán thành nhiều phần nhỏ và tính toán đồng thời trên nhiều luồng nhằm rút ngắn thời gian xử lý.
+\end{itemize}
+
+Sau khi hoàn thành, hai phiên bản sẽ được so sánh hiệu năng (\textit{speed-up}) để minh họa lợi ích của lập trình song song.
+
+Về mặt toán học, giá trị tổng có thể được tính chính xác bằng công thức Gauss:
+
+\[
+\text{sum}(n) = \frac{n(n + 1)}{2}
+\]
+
+Công thức này được dùng để kiểm chứng tính đúng đắn của kết quả mà hai phiên bản chương trình tính toán được.
+
+% =====================================================
+
+\subsection{Cách thức thực hiện}
+
+\subsubsection{Phương pháp tiếp cận}
+
+\subsubsection*{(a) Phiên bản tuần tự (Serial Version).}
+
+$\indent$Phiên bản này thực hiện một vòng lặp duy nhất, cộng dồn từng giá trị từ 1 đến $n$ để thu được tổng cuối cùng.  
+Toàn bộ quá trình chỉ chạy trên một luồng, do đó mọi phép cộng được thực hiện tuần tự.
+
+Để đo thời gian thực thi, chương trình sử dụng hàm \texttt{clock()} trong thư viện \texttt{<time.h>}.  
+Sau khi hoàn tất, kết quả được so sánh với giá trị lý thuyết (theo công thức Gauss) để xác minh tính chính xác.\\
+
+Cấu trúc chương trình gồm ba phần chính:
+\begin{enumerate}
+    \item Kiểm tra và đọc tham số đầu vào (giá trị $n$);
+    \item Thực hiện phép cộng tuần tự;
+    \item Đo và hiển thị thời gian chạy cùng kết quả kiểm chứng.
+\end{enumerate}
+
+\subsubsection*{(b) Phiên bản đa luồng (Multi-thread Version).}
+
+$\indent$Phiên bản này áp dụng mô hình \textbf{chia miền dữ liệu (data partitioning)} để khai thác khả năng xử lý song song của CPU đa nhân.
+
+Toàn bộ tập dữ liệu $[1, n]$ được chia thành nhiều đoạn con gần bằng nhau, tùy theo số lượng luồng \texttt{numThreads}.  
+Mỗi luồng sẽ chịu trách nhiệm tính tổng trên một đoạn con cụ thể như sau:
+
+\[
+\begin{aligned}
+\text{Thread 1:}&\ 1 \rightarrow \frac{n}{\text{numThreads}} \\
+\text{Thread 2:}&\ \frac{n}{\text{numThreads}} + 1 \rightarrow \frac{2n}{\text{numThreads}} \\
+&\vdots \\
+\text{Thread k:}&\ (\!k - 1\!) \cdot \frac{n}{\text{numThreads}} + 1 \rightarrow n
+\end{aligned}
+\]
+
+Mỗi luồng lưu kết quả riêng của mình vào biến \texttt{partial\_sum}, nằm trong một cấu trúc dữ liệu \texttt{ThreadData}.  
+Sau khi tất cả luồng hoàn tất (được đồng bộ bằng hàm \texttt{pthread\_join()}), chương trình sẽ cộng gộp tất cả các giá trị \texttt{partial\_sum} lại để thu được tổng cuối cùng \texttt{total\_sum}.
+
+Thư viện \texttt{<pthread.h>} được sử dụng cho các thao tác tạo, thực thi và đồng bộ luồng, trong khi \texttt{<time.h>} tiếp tục được sử dụng để đo thời gian xử lý.\\
+
+Quá trình thực thi của phiên bản đa luồng bao gồm các bước:
+\begin{enumerate}
+    \item \textbf{Nhập tham số đầu vào}: chương trình nhận vào số lượng luồng \texttt{numThreads} và giá trị \texttt{n}.
+    
+    \item \textbf{Chia miền dữ liệu}: toàn bộ dãy số $[1, n]$ được chia thành các đoạn con gần bằng nhau, mỗi đoạn có kích thước
+    \[
+    \text{chunk\_size} = \frac{n}{\text{numThreads}}
+    \]
+    để mỗi luồng xử lý một phần riêng.
+    
+    \item \textbf{Tạo và khởi chạy các luồng}: sử dụng hàm \texttt{pthread\_create()} để tạo luồng và gán cho mỗi luồng phạm vi dữ liệu cần tính toán.
+    
+    \item \textbf{Tính toán song song}: mỗi luồng thực hiện hàm \texttt{calculate\_partial\_sum()} để tính tổng của đoạn dữ liệu được phân công, lưu kết quả vào biến \texttt{partial\_sum} riêng trong cấu trúc \texttt{ThreadData}.
+    
+    \item \textbf{Đồng bộ hóa luồng}: sử dụng \texttt{pthread\_join()} để chờ tất cả luồng hoàn tất, đảm bảo kết quả được thu thập đầy đủ trước khi tiếp tục.
+    
+    \item \textbf{Tổng hợp kết quả}: cộng gộp tất cả các giá trị \texttt{partial\_sum} từ từng luồng để thu được tổng cuối cùng \texttt{total\_sum}.
+    
+    \item \textbf{Kiểm chứng và đo thời gian}: so sánh kết quả cuối cùng với công thức Gauss và hiện thời gian.
+\end{enumerate}
+
+% =====================================================
+
+\subsubsection{Đánh giá và quan sát}
+
+$\indent$Khi thực hiện chương trình với cùng một giá trị $n$ (ví dụ $n = 1{,}000{,}000$):
+
+\begin{itemize}
+    \item Phiên bản tuần tự chỉ sử dụng một luồng, do đó thời gian thực thi tăng tuyến tính theo kích thước $n$.
+    \item Phiên bản đa luồng chia tải công việc cho nhiều luồng, nhờ đó tận dụng được nhiều nhân xử lý của CPU, dẫn đến giảm đáng kể thời gian tính toán.
+\end{itemize}
+
+Hiệu quả tăng tốc (\textit{Speed-up}) được định nghĩa bởi công thức:
+
+\[
+S = \frac{T_{\text{serial}}}{T_{\text{parallel}}}
+\]
+
+Trong đó:
+\begin{itemize}
+    \item $T_{\text{serial}}$: thời gian thực thi của phiên bản tuần tự;
+    \item $T_{\text{parallel}}$: thời gian thực thi của phiên bản đa luồng.
+\end{itemize}
+
+
+Kết quả thực nghiệm cho thấy, đối với các giá trị $n$ lớn, phiên bản đa luồng giúp giảm đáng kể thời gian chạy, minh chứng cho hiệu quả của lập trình song song trong việc tối ưu hiệu năng chương trình.
+
+\subsection{Hình Ảnh Kết Quả Đầu Ra}
+\subsubsection*{(a) Phiên bản tuần tự (Sum Serial).}
+
+$\indent$Sau khi chạy chương trình \textbf{phiên bản tuần tự (Serial Version)} với đầu vào $n = 500{,}000$, kết quả hiển thị như sau:
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=16cm]{image/2b.png}
+    \vspace{0.5cm}
+    \caption{\textit{Serial Sum Calculator (n = 500{,}000)}}
+    \label{fig:pinout_stm32}
+\end{figure}
+
+Một số nhận xét chi tiết:
+
+\begin{itemize}
+    \item \textbf{Result: 125000250000} - Đây là tổng được tính bằng phương pháp cộng tuần tự các số từ 1 đến 500{,}000. Kết quả hoàn toàn chính xác và hợp lý.
+    
+    \item \textbf{Expected (formula): 125000250000} - Giá trị này được tính theo công thức Gauss:
+    \[
+    \text{sum}(n) = \frac{n(n + 1)}{2} \Rightarrow \text{sum}(500{,}000) = 125{,}000{,}250{,}000
+    \]
+    Việc trùng khớp giữa giá trị tính toán và lý thuyết chứng minh chương trình hoạt động đúng.
+    
+    \item \textbf{Time taken: 0.000103 seconds} - Thời gian thực thi được đo bằng hàm \texttt{clock()}. Với $n = 500{,}000$, thời gian vẫn rất nhỏ, chỉ khoảng 0.1 milli-giây. Tuy nhiên, nếu $n$ lớn hơn nhiều, ví dụ $10^7$ hoặc $10^8$, thời gian sẽ tăng tuyến tính.
+    
+    \item \textbf{Verification: \checkmark CORRECT} - Kết quả tính toán được xác nhận là chính xác, không xảy ra sai sót hay lỗi logic.
+\end{itemize}
+
+Tổng thể, chương trình \textbf{Serial Sum Calculator} với $n = 500{,}000$ hoạt động chính xác và hiệu quả. Tuy nhiên, đối với các giá trị $n$ lớn hơn, thời gian tính toán sẽ tăng theo cấp số tuyến tính, đây là lý do để so sánh với phiên bản \textbf{đa luồng (Multi-thread Version)} nhằm đánh giá lợi ích của lập trình song song.
+
+\subsubsection*{(b) Phiên bản đa luồng (Sum Multi Thread).}
+$\indent$Sau khi chạy chương trình \textbf{phiên bản đa luồng} với $n = 8{,}000{,}000$ và $10$ luồng, kết quả hiển thị:
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=13.5cm]{image/2c.png}
+    \vspace{0.5cm}
+    \caption{\textit{Multi thread Sum Calculator (n = 8{,}000{,}000, numThreads = 10)}}
+    \label{fig:pinout_stm32}
+\end{figure}
+
+Một số nhận xét chi tiết:
+\begin{itemize}
+    \item \textbf{Thread Details} - Bảng hiển thị phạm vi số và tổng từng đoạn mà mỗi luồng xử lý. Mỗi luồng chịu trách nhiệm tính tổng của khoảng 800{,}000 số liên tiếp. Việc chia đều công việc giúp tận dụng hiệu quả khả năng xử lý song song của CPU.
+    
+    \item \textbf{Partial Sum} - Mỗi luồng lưu kết quả tính toán riêng. Khi cộng tất cả các \texttt{partial\_sum} từ 10 luồng, thu được \texttt{Total sum} chính xác.
+    
+    \item \textbf{Total sum: 32{,}000{,}004{,}000{,}000} - Tổng cuối cùng khớp hoàn toàn với giá trị lý thuyết, chứng minh tính chính xác của thuật toán đa luồng.
+    
+    \item \textbf{Expected (formula): 32{,}000{,}004{,}000{,}000} - Giá trị tính theo công thức Gauss:
+    \[
+    \text{sum}(n) = \frac{n(n+1)}{2} \Rightarrow \text{sum}(8{,}000{,}000) = 32{,}000{,}004{,}000{,}000
+    \]
+    
+    \item \textbf{Time taken: 0.005356 seconds} - Thời gian thực thi được đo bằng \texttt{clock()}. So với phiên bản tuần tự, phiên bản đa luồng xử lý nhanh hơn đáng kể nhờ việc chia tải cho nhiều luồng.
+    
+    \item \textbf{Verification: \checkmark CORRECT} - Kết quả cuối cùng được xác nhận chính xác, hoàn toàn phù hợp với giá trị lý thuyết.
+\end{itemize}
+
+Nhìn chung, phiên bản đa luồng cho thấy lợi ích rõ rệt của lập trình song song: giảm đáng kể thời gian thực thi, đặc biệt với các giá trị $n$ lớn, đồng thời kết quả vẫn đảm bảo chính xác.
+
+\subsubsection*{(c) So sánh hiệu năng - Serial vs Multi-thread Sum Calculator}
+Thử nghiệm chương trình với $n = 100{,}000{,}000$ và $10$ luồng cho kết quả như sau:
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=14cm]{image/2d.png}
+    \vspace{0.5cm}
+    \caption{\textit{Serial và Multi-thread Sum Calculator (n = 100, numThreads = 10)}}
+    \label{fig:pinout_stm32}
+\end{figure}
+Một số nhận xét quan trọng:
+
+\begin{itemize}
+    \item \textbf{Độ chính xác:}
+    \begin{itemize}
+        \item Cả hai phiên bản Serial và Multi-thread đều tính đúng tổng của dãy số từ 1 đến $100{,}000{,}000$.
+        \item Kết quả cuối cùng \texttt{Total sum = 5{,}000{,}000{,}050{,}000{,}000} trùng khớp với giá trị lý thuyết theo công thức Gauss:
+        \[
+        \text{sum}(n) = \frac{n(n+1)}{2} = 5{,}000{,}000{,}050{,}000{,}000
+        \]
+        \item Xác minh thành công: \checkmark CORRECT.
+    \end{itemize}
+
+    \item \textbf{Hiệu năng:}
+    \begin{itemize}
+        \item \textbf{Serial Version:} thời gian thực thi $T_\text{serial} = 0.020298$ giây.
+        \item \textbf{Multi-thread Version:} thời gian thực thi $T_\text{parallel} = 0.004505$ giây.
+        \item Hiệu quả tăng tốc (Speed-up) được tính bằng:
+        \[
+            S = \frac{T_\text{serial}}{T_\text{parallel}} \approx \frac{0.020298}{0.004505} \approx 4.5
+        \]
+        \item Như vậy, Multi-thread nhanh hơn Serial khoảng 4.5 lần, nhờ tận dụng 10 luồng xử lý song song.
+    \end{itemize}
+
+   \item \textbf{Nguyên nhân khác biệt:}
+\begin{itemize}
+    \item Phiên bản Multi-thread chia dãy số thành nhiều đoạn con, mỗi luồng xử lý song song trên một đoạn riêng biệt, nhờ đó tận dụng khả năng đa nhân của CPU.
+    \item Phiên bản Serial thực hiện tính toán tuần tự trên một luồng duy nhất, không tận dụng được song song.
+    \item Khi $n$ lớn, chi phí tạo và đồng bộ luồng trở nên rất nhỏ so với tổng thời gian, dẫn đến cải thiện đáng kể tốc độ xử lý.
+\end{itemize}
+
+\item \textbf{Nhận xét chung:}
+\begin{itemize}
+    \item Phiên bản Multi-thread tỏ ra hiệu quả hơn rõ rệt khi xử lý dữ liệu lớn, đồng thời vẫn đảm bảo kết quả chính xác.
+    \item Phiên bản Serial phù hợp với dữ liệu nhỏ, vì khi đó overhead của Multi-thread có thể làm thời gian chạy dài hơn.
+    \item Tăng số lượng luồng giúp speed-up tiến gần tới số nhân vật lý của CPU, nhưng luôn bị giới hạn bởi chi phí tạo và đồng bộ luồng.
+\end{itemize}
+\end{itemize}
+
+
+
+
+
+
+
+
+\newpage
+\section{PROBLEM 3}
+\subsection{Mô tả bài toán tổng quan}
+
+\subsubsection{Giới thiệu}
+
+$\indent$Bài toán yêu cầu xây dựng một hệ thống giao tiếp hai chiều giữa hai tiến trình (\textit{Process A} và \textit{Process B}) trên hệ điều hành Linux, sử dụng \textit{System V Message Queue} làm kênh trao đổi thông điệp. Hệ thống mô phỏng một ứng dụng nhắn tin cơ bản, cho phép người dùng nhập và nhận tin nhắn theo thời gian thực giữa hai tiến trình độc lập.\\
+
+Hệ thống được thiết kế với các yêu cầu sau:
+
+\begin{itemize}
+    \item \textbf{Giao tiếp song song, đa luồng}: mỗi tiến trình có hai \textit{thread} độc lập - một \textit{thread gửi} (\textit{send}) và một \textit{thread nhận} (\textit{receive}) - để người dùng có thể gửi và nhận tin nhắn đồng thời mà không bị chặn.
+    
+    \item \textbf{Quản lý tài nguyên an toàn}: mỗi tiến trình chịu trách nhiệm tạo và xóa \textit{message queue} mà nó quản lý, đảm bảo tránh rò rỉ tài nguyên hệ thống.
+    
+    \item \textbf{Xử lý \textit{signal} và kết thúc an toàn}: hệ thống có cơ chế nhận \textit{signal} từ OS (\texttt{SIGINT}, \texttt{SIGTERM}) để dừng \textit{threads} và dọn dẹp queue một cách có kiểm soát.
+    
+    \item \textbf{Cơ chế đồng bộ khởi động}: tiến trình B phải đợi tiến trình A tạo queue trước khi bắt đầu gửi/nhận, tránh lỗi khi queue chưa tồn tại.
+\end{itemize}
+
+\subsubsection{Kiến trúc tổng thể}
+
+Hệ thống bao gồm ba thành phần chính:
+
+\begin{enumerate}
+    \item \textbf{Hai tiến trình độc lập (Process A và Process B):}
+    \begin{itemize}
+        \item Mỗi tiến trình chạy trong không gian địa chỉ riêng biệt.
+        \item Giao tiếp thông qua các \textit{message queues} do kernel quản lý.
+    \end{itemize}
+    
+    \item \textbf{Hai hàng đợi thông điệp (Message Queues):}
+    \begin{itemize}
+        \item \texttt{QUEUE\_A\_TO\_B}: Truyền dữ liệu từ Process A sang Process B.
+        \item \texttt{QUEUE\_B\_TO\_A}: Truyền dữ liệu từ Process B sang Process A.
+        \item Việc tách riêng hai queue giúp đảm bảo tính toàn vẹn và hướng truyền \textbf{độc lập cho mỗi chiều dữ liệu}.
+    \end{itemize}
+    
+    \item \textbf{Hai luồng xử lý trong mỗi tiến trình:}
+    \begin{itemize}
+        \item \textbf{Sender Thread}: Đọc dữ liệu từ bàn phím, đóng gói vào cấu trúc thông điệp, và gửi đi qua queue.
+        \item \textbf{Receiver Thread}: Liên tục lắng nghe queue nhận và hiển thị nội dung ra màn hình.
+    \end{itemize}
+\end{enumerate}
+
+Nhờ cấu trúc này, mỗi tiến trình có thể gửi và nhận \textbf{song song}, hình thành kênh truyền hai chiều hoạt động đồng bộ, đồng thời vẫn đảm bảo tách biệt luồng dữ liệu và tránh xung đột.
+
+
+\subsection{Cơ chế hoạt động của hệ thống}
+
+$\indent$Hệ thống được thiết kế dựa trên nguyên lý \textbf{giao tiếp liên tiến trình không đồng bộ (Asynchronous IPC)} thông qua các \textbf{hàng đợi thông điệp} do kernel quản lý. Cơ chế hoạt động được tổ chức theo bốn giai đoạn chính:
+
+\begin{enumerate}
+    \item \textbf{Khởi tạo hệ thống}
+    \begin{enumerate}
+        \item \textbf{Process A:} Khởi động đầu tiên và tạo hai hàng đợi thông điệp:
+        \begin{itemize}
+            \item \texttt{QUEUE\_A\_TO\_B}: truyền dữ liệu từ A sang B.
+            \item \texttt{QUEUE\_B\_TO\_A}: truyền dữ liệu từ B sang A.
+            \item Cả hai được tạo bằng hàm \texttt{msgget()} với cờ \texttt{IPC\_CREAT}.
+        \end{itemize}
+        \item \textbf{Process B:} Khởi động sau, kiểm tra (polling) sự tồn tại của \texttt{QUEUE\_A\_TO\_B} tối đa 30 giây. Khi hàng đợi sẵn sàng:
+        \begin{itemize}
+            \item Kết nối vào hệ thống.
+            \item Tạo hoặc mở lại \texttt{QUEUE\_B\_TO\_A} để đảm bảo kênh gửi dữ liệu.
+        \end{itemize}
+    \end{enumerate}
+
+    \item \textbf{Truyền thông điệp}
+    \begin{enumerate}
+        \item Người dùng nhập dữ liệu tại Process A hoặc Process B.
+        \item \textbf{Luồng gửi (\texttt{thread\_send}):} đóng gói dữ liệu vào cấu trúc thông điệp:
+        \begin{verbatim}
+struct message {
+    long mtype;
+    char text[256];
+    char sender[50];
+};
+        \end{verbatim}
+        \begin{itemize}
+            \item \texttt{mtype}: định danh loại thông điệp.
+            \item \texttt{sender}: xác định nguồn phát.
+        \end{itemize}
+        \item Thông điệp được gửi qua \texttt{msgsnd()} và lưu trong kernel cho đến khi tiến trình đích đọc.
+    \end{enumerate}
+
+    \item \textbf{Nhận và hiển thị thông điệp}
+    \begin{enumerate}
+        \item \textbf{Luồng nhận (\texttt{thread\_recv}):} liên tục gọi \texttt{msgrcv()} để nhận thông điệp từ hàng đợi.
+        \item Nội dung thông điệp được hiển thị ra màn hình kèm tên người gửi.
+        \item Nếu thông điệp chứa từ khóa \texttt{"quit"}, hệ thống hiểu là yêu cầu kết thúc phiên và kích hoạt quy trình dọn dẹp tài nguyên.
+    \end{enumerate}
+
+    \item \textbf{Kết thúc và dọn dẹp (Cleanup)}
+    \begin{enumerate}
+        \item Khi người dùng thoát hoặc nhấn Ctrl+C, hàm \texttt{cleanup()} được gọi.
+        \item \textbf{Xóa hàng đợi:} 
+        \begin{itemize}
+            \item Process A xóa \texttt{QUEUE\_A\_TO\_B}.
+            \item Process B chỉ xóa \texttt{QUEUE\_B\_TO\_A}.
+        \end{itemize}
+        \item Các luồng được hủy an toàn, mutex giải phóng, và toàn bộ hàng đợi trong kernel được dọn sạch.
+    \end{enumerate}
+\end{enumerate}
+
+\noindent
+\textbf{Lưu ý:} Mỗi tiến trình chịu trách nhiệm duy nhất với hàng đợi của mình, giúp tránh \textbf{race condition} và lỗi truy cập khi một tiến trình kết thúc trước tiến trình còn lại.
+
+
+
+\begin{figure}[!htp]
+    \centering
+    \includegraphics[width=16cm]{image/3a.png}
+    \vspace{0.5cm}
+    \caption{\textit{Message Queue System}}
+    \label{fig:pinout_stm32}
+\end{figure}
+
+
+
+
+\subsection*{Process A - Khởi tạo giao tiếp}
+
+\begin{itemize}
+    \item \textbf{SEND (Gửi đi)}
+    \begin{itemize}
+        \item Thu thập dữ liệu từ bàn phím và đóng gói thông điệp gồm: loại, người gửi và nội dung.
+        \item Gửi thông điệp vào hàng đợi \texttt{QUEUE\_A\_TO\_B}.
+        \item \textbf{Vai trò:} Khởi tạo giao tiếp, chủ động truyền dữ liệu đến Process B.
+    \end{itemize}
+
+    \item \textbf{RECV (Nhận về)}
+    \begin{itemize}
+        \item Lắng nghe hàng đợi \texttt{QUEUE\_B\_TO\_A} để nhận phản hồi từ Process B.
+        \item Hiển thị thông điệp ngay khi nhận, cho phép A vừa gửi vừa nhận song song.
+        \item \textbf{Đặc điểm:} Giao tiếp không chặn, đảm bảo tính liên tục.
+    \end{itemize}
+\end{itemize}
+
+\subsection*{Process B - Phản hồi}
+
+\begin{itemize}
+    \item \textbf{RECV (Nhận về)}
+    \begin{itemize}
+        \item Lắng nghe hàng đợi \texttt{QUEUE\_A\_TO\_B} từ Process A.
+        \item Hiển thị nội dung và thông tin người gửi, chuẩn bị phản hồi tiếp theo.
+        \item \textbf{Vai trò:} B luôn sẵn sàng nhận và xử lý dữ liệu từ A.
+    \end{itemize}
+
+    \item \textbf{SEND (Gửi đi)}
+    \begin{itemize}
+        \item Nhập dữ liệu phản hồi và đóng gói thành thông điệp.
+        \item Gửi trở lại Process A qua \texttt{QUEUE\_B\_TO\_A}.
+        \item \textbf{Kết quả:} Hoàn tất chu kỳ trao đổi hai chiều, duy trì tính liên tục và đối xứng.
+    \end{itemize}
+\end{itemize}
+
+
+
+
+\subsection{Hình Ảnh Kết Quả Đầu Ra}
+\subsubsection*{3.2.1. Testcase 1:}
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.52\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, height=6.5cm]{image/3b.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.47\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/3c.png}
+    \end{minipage}
+    \vspace{0.51cm}
+    \caption{Implementation Results}
+\end{figure}
+
+\begin{itemize}
+
+\item \textbf{Khởi chạy Process A}
+
+\begin{itemize}
+    \item Process A được kích hoạt và hiển thị tiêu đề: \textit{“Two-Way Chat – Process A”}.
+    \item Hai luồng \textbf{SEND} và \textbf{RECV} được tạo, sẵn sàng để gửi và nhận tin nhắn.
+    \item Người dùng có thể gửi tin nhắn hoặc thoát bằng lệnh \texttt{quit}.
+\end{itemize}
+
+\item \textbf{Khởi chạy Process B}
+
+\begin{itemize}
+    \item Process B khởi động sau Process A, chờ kết nối với \textit{message queue} do A tạo.
+    \item Khi kết nối thành công, Process B hiển thị tiêu đề \textit{“Two-Way Chat – Process B”} và trạng thái các luồng \textbf{SEND/RECV}.
+\end{itemize}
+
+\item \textbf{Trao đổi tin nhắn}
+
+\begin{itemize}
+    \item Hai tiến trình gửi và nhận tin nhắn song song, đảm bảo giao tiếp không bị chặn.
+    \item Hàng đợi tin nhắn hoạt động ổn định, các luồng \textbf{SEND/RECV} chạy độc lập, cho phép cả hai tiến trình trao đổi liên tục mà không trễ.
+\end{itemize}
+
+\item \textbf{Kết thúc phiên chat}
+
+\begin{itemize}
+    \item Khi Process A gửi lệnh kết thúc, Process B nhận thông báo đóng kết nối.
+    \item Cả hai tiến trình hiển thị thông báo \textit{“Terminated”} và dọn dẹp tài nguyên an toàn.
+\end{itemize}
+
+\end{itemize}
+
+
+\newpage
+\subsubsection*{3.2.2. Testcase 2:}
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/3e.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.5\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/3f.png}
+    \end{minipage}
+    \vspace{0.51cm}
+    \caption{SIGNAL HANDLING - Ctrl+C Cleanup}
+\end{figure}
+\begin{itemize}
+
+\item \textbf{Process A khởi chạy}
+\begin{itemize}
+    \item Hiển thị tiêu đề chương trình \textit{“Two-Way Chat – Process A”} và thông báo các luồng \textbf{SEND} và \textbf{RECV} đã sẵn sàng.
+    \item Người dùng có thể gửi tin nhắn hoặc thoát phiên chat bằng lệnh \texttt{quit}.
+\end{itemize}
+
+\item \textbf{Process B khởi chạy}
+\begin{itemize}
+    \item Chờ Process A tạo hàng đợi, kết nối thành công và hiển thị tiêu đề cùng trạng thái các luồng \textbf{SEND/RECV}.
+    \item Các luồng \textbf{SEND/RECV} của B sẵn sàng trao đổi dữ liệu với A.
+\end{itemize}
+
+\item \textbf{Trao đổi tin nhắn}
+\begin{itemize}
+    \item Tin nhắn được gửi và nhận liên tục giữa A và B, đảm bảo giao tiếp hai chiều thời gian thực.
+    \item Luồng \textbf{SEND} và \textbf{RECV} chạy song song, không bị chặn.
+    \item Hàng đợi tin nhắn hoạt động ổn định, các tin nhắn được nhận đúng thứ tự, đảm bảo đáng tin cậy.
+\end{itemize}
+
+\item \textbf{Xử lý thoát}
+\begin{itemize}
+    \item Khi nhấn \texttt{Ctrl+C} hoặc A gửi lệnh kết thúc, cả hai tiến trình nhận tín hiệu, in thông báo và dọn dẹp tài nguyên.
+    \item Đảm bảo không để lại rác hệ thống hay tin nhắn trong hàng đợi.
+\end{itemize}
+
+\end{itemize}
+\newpage
+
+\subsubsection*{3.2.3. Testcase 3:}
+
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=0.9\textwidth]{image/3d.png}
+        \vspace{0.5cm}
+    \caption{Error Handling - Process B Timeout}
+\end{figure}
+\begin{itemize}
+    \item \textbf{Tình huống:} Người dùng khởi chạy \textbf{Process B} trước \textbf{Process A}. Process B cần nhận tin nhắn từ hàng đợi \texttt{QUEUE\_A\_TO\_B}, nhưng hàng đợi này chưa tồn tại vì Process A chưa chạy.
+    
+    \item \textbf{Hành vi của Process B:}
+    \begin{itemize}
+        \item Kiểm tra sự tồn tại của hàng đợi.
+        \item Nếu hàng đợi chưa tồn tại, báo \textit{Waiting for Process A to create queues}.
+        \item Nếu sau 30 giây queue vẫn chưa có, hiển thị lỗi và dừng thực thi.
+    \end{itemize}
+
+
+    \item \textbf{Kết luận:} Process B phụ thuộc hoàn toàn vào Process A; phải chạy Process A trước thì Process B mới hoạt động bình thường.
+\end{itemize}
+
+
+
+\subsubsection*{3.2.4. Testcase 4:}
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[b]{0.52\textwidth}
+        \centering
+        \includegraphics[width=\textwidth,height=4.5cm]{image/3i.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[b]{0.47\textwidth}
+        \centering
+        \includegraphics[width=\textwidth,height=4.5cm]{image/3k.png}
+    \end{minipage}
+    \vspace{0.51cm}
+    \caption{SPECIAL CHARACTERS and LONG MESSAGE}
+\end{figure}
+
+
+
+\begin{itemize}
+    \item Gửi ký tự đặc biệt (\texttt{!@#\$\%\^\&*()\_+-=[]\{\}|;:',.<>?/~`}) để đảm bảo hệ thống xử lý đúng tất cả các ký tự ASCII mà không gây lỗi hoặc mất dữ liệu.
+    \item Gửi văn bản rất dài (gần hoặc tối đa kích thước buffer, ví dụ 256 ký tự) để kiểm tra khả năng xử lý message dài của message queue, đảm bảo không bị cắt bớt hoặc tràn buffer.
+\end{itemize}
+
+\textbf{Ý nghĩa của kết quả:}
+\begin{itemize}
+    \item Process B và A nhận đầy đủ toàn bộ nội dung, không mất dữ liệu → xác nhận buffer handling hoạt động ổn định.
+    \item Kết quả này minh chứng hệ thống có thể xử lý các trường hợp biên (edge cases) một cách an toàn.
+\end{itemize}
+
+
+
+\newpage
+\section{PROBLEM 4}
+\subsection{Mô tả bài toán tổng quan}
+\subsubsection{Mục tiêu bài toán}
+
+ $\indent$Vận dụng hàm hệ thống \texttt{mmap()} trong ngôn ngữ C để xây dựng cơ chế chia sẻ dữ liệu giữa hai tiến trình (Writer và Reader) thông qua một vùng nhớ dùng chung (shared memory) được ánh xạ trực tiếp từ file.
+
+Cụ thể, chương trình cần thực hiện các nhiệm vụ sau:
+\begin{itemize}
+    \item Ánh xạ file vào không gian địa chỉ cục bộ (local address space) của tiến trình, cho phép truy cập dữ liệu như thao tác với bộ nhớ trong RAM.
+    \item Cho phép hai tiến trình độc lập cùng đọc và ghi dữ liệu trên cùng một vùng nhớ đã ánh xạ, thể hiện khả năng chia sẻ dữ liệu theo thời gian thực.
+    \item Minh họa cơ chế giao tiếp liên tiến trình (IPC) thông qua bộ nhớ dùng chung dựa trên file, mà không cần sử dụng các phương thức truyền thống như \texttt{pipe}, \texttt{socket} hay \texttt{message queue}.
+\end{itemize}
+
+
+\subsubsection{Nguyên lý hoạt động}
+
+\begin{itemize}
+    \item Hàm \texttt{mmap()} cho phép ánh xạ một file từ đĩa vào không gian địa chỉ ảo của tiến trình, giúp tiến trình truy cập dữ liệu như thao tác với vùng nhớ trong RAM mà không cần đọc/ghi file thủ công.
+    \item Khi hai tiến trình cùng ánh xạ một file với cờ \texttt{MAP\_SHARED}, cả hai sẽ chia sẻ cùng một vùng bộ nhớ vật lý do kernel quản lý, đảm bảo mọi thay đổi từ tiến trình này sẽ tức thời hiển thị ở tiến trình kia.
+    \item Dữ liệu được đồng bộ qua \texttt{page cache} của hệ điều hành, giúp giao tiếp liên tiến trình (IPC) nhanh và hiệu quả, mà không cần sử dụng các cơ chế truyền thống như \texttt{pipe}, \texttt{socket} hay \texttt{message queue}.
+    \item Để tránh xung đột khi đọc/ghi đồng thời, tiến trình thường sử dụng biến trạng thái (\texttt{status}) trong vùng nhớ chung để thông báo tình trạng dữ liệu (ví dụ: \texttt{READY}, \texttt{UPDATED}, \texttt{READ\_AND\_MODIFIED})
+\end{itemize}
+
+\subsubsection{Cấu trúc chương trình}
+Gồm ba tệp nguồn chính, mỗi tệp đảm nhận một vai trò riêng trong cơ chế chia sẻ dữ liệu:
+
+\begin{itemize}
+    \item \textbf{shared\_data.h}: Định nghĩa cấu trúc dữ liệu chung (\texttt{SharedData}), kích thước vùng nhớ và tên file chia sẻ (\texttt{SHARED\_FILE}).
+    \item \textbf{mmap\_writer.c}: Tiến trình Writer tạo/mở file, ánh xạ vào bộ nhớ, ghi dữ liệu (biến đếm, thông điệp, mảng, trạng thái) và cập nhật cờ báo hiệu dữ liệu đã sẵn sàng.
+    \item \textbf{mmap\_reader.c}: Tiến trình Reader ánh xạ cùng file, đọc dữ liệu Writer ghi, hiển thị thông tin và có thể ghi phản hồi ngược lại (ví dụ: cập nhật trạng thái).
+\end{itemize}
+
+
+
+
+
+
+
+\subsection{Quy trình thực hiện}
+$\indent$Mô phỏng giao tiếp giữa hai tiến trình (Writer và Reader) thông qua bộ nhớ dùng chung (shared memory) ánh xạ từ file. 
+
+Quy trình thực hiện được chia thành các bước chính sau:
+
+\begin{enumerate}
+    \item \textbf{Chuẩn bị vùng nhớ dùng chung}
+    \begin{itemize}
+        \item Writer tạo hoặc mở file chia sẻ dữ liệu và đặt kích thước file đủ lớn để chứa toàn bộ thông tin cần chia sẻ (\texttt{ftruncate()}).
+        \item File được ánh xạ vào không gian địa chỉ ảo của tiến trình bằng \texttt{mmap()} với cờ \texttt{MAP\_SHARED}, cho phép truy cập dữ liệu như vùng nhớ thông thường.
+        \item Cơ chế này đảm bảo mọi thay đổi từ một tiến trình sẽ tức thời phản ánh đến tiến trình khác và được kernel quản lý thông qua page cache.
+    \end{itemize}
+
+    \item \textbf{Khởi tạo dữ liệu và đồng bộ trạng thái}
+    \begin{itemize}
+        \item Writer khởi tạo biến trạng thái (\texttt{status}) = ``INIT'' để báo Reader rằng dữ liệu chưa sẵn sàng.
+        \item Ghi dữ liệu ban đầu vào vùng nhớ, bao gồm:
+        \begin{itemize}
+            \item Biến đếm (\texttt{counter})
+            \item Thông điệp (\texttt{message})
+            \item Mảng số nguyên (\texttt{data})
+            \item Mảng số thực (\texttt{values})
+        \end{itemize}
+        \item Sau khi ghi xong, Writer cập nhật trạng thái \texttt{status = "READY"}, báo hiệu Reader có thể bắt đầu đọc dữ liệu.
+    \end{itemize}
+
+    \item \textbf{Reader đọc dữ liệu}
+    \begin{itemize}
+        \item Reader đợi file chia sẻ tồn tại và ánh xạ cùng file vào bộ nhớ (\texttt{mmap()} với \texttt{MAP\_SHARED}).
+        \item Reader kiểm tra biến trạng thái (\texttt{status}) để chỉ đọc dữ liệu khi Writer đã chuẩn bị xong (\texttt{status = "READY"}).
+        \item Reader đọc toàn bộ dữ liệu từ vùng nhớ: biến đếm, thông điệp, mảng số nguyên và mảng số thực.
+        \item Reader có thể ghi phản hồi ngược lại vào vùng nhớ, ví dụ cập nhật \texttt{status} hoặc \texttt{counter}, minh họa khả năng giao tiếp hai chiều.
+    \end{itemize}
+
+    \item \textbf{Cập nhật dữ liệu trong thời gian thực}
+    \begin{itemize}
+        \item Writer hoặc Reader có thể cập nhật dữ liệu đã ánh xạ trong khi tiến trình còn hoạt động:
+        \begin{itemize}
+            \item Writer: cập nhật \texttt{counter}, \texttt{message}, \texttt{status = "UPDATED"}
+            \item Reader: ghi phản hồi, ví dụ \texttt{status = "READ\_AND\_MODIFIED"}
+        \end{itemize}
+        \item Các thay đổi được phản ánh tức thời nhờ cơ chế chia sẻ bộ nhớ \texttt{MAP\_SHARED}.
+    \end{itemize}
+
+    \item \textbf{Giải phóng tài nguyên}
+    \begin{itemize}
+        \item Khi hoàn tất, cả hai tiến trình gọi \texttt{munmap()} để hủy ánh xạ vùng nhớ, đóng file bằng \texttt{close()} và có thể xóa file chia sẻ nếu không còn sử dụng.
+        \item Quy trình này đảm bảo tài nguyên hệ thống được giải phóng an toàn và không gây rò rỉ bộ nhớ.
+    \end{itemize}
+\end{enumerate}
+
+\renewcommand{\arraystretch}{1.5} % Tăng khoảng cách giữa các dòng
+
+\begin{tabularx}{\textwidth}{@{} l X @{}}
+\toprule
+\textbf{Tiến trình} & \textbf{Quy trình} \\ 
+\midrule
+Writer & Tạo/mở file $\rightarrow$ ánh xạ vào bộ nhớ $\rightarrow$ ghi dữ liệu $\rightarrow$ cập nhật \texttt{status = "READY"} $\rightarrow$ chờ Reader $\rightarrow$ cập nhật \texttt{"UPDATED"} $\rightarrow$ giải phóng vùng nhớ. \\ 
+
+Reader & Đợi file tồn tại $\rightarrow$ ánh xạ vào bộ nhớ $\rightarrow$ kiểm tra \texttt{status = "READY"} $\rightarrow$ đọc dữ liệu $\rightarrow$ ghi phản hồi (tùy chọn) $\rightarrow$ giải phóng vùng nhớ. \\ 
+
+Cơ chế chia sẻ & Dữ liệu được truyền trực tiếp qua page cache nhờ \texttt{MAP\_SHARED}, không cần IPC truyền thống (pipe, socket, message queue). \\ 
+\bottomrule
+\end{tabularx}
+
+\vspace{0.5cm}
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=1\textwidth]{image/4a.png}
+        \vspace{0.5cm}
+    \caption{Sơ Đồ Minh Họa MMap - Chia sẽ dữ liệu giữa 2 Process}
+\end{figure}
+
+\newpage
+\subsection{Kết quả đầu ra và phân tích}
+
+\subsubsection{Writer Process - Khởi tạo và ghi dữ liệu ban đầu}
+
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=1\textwidth]{image/4s.png}
+        \vspace{0.5cm}
+    \caption{Quá trình khởi tạo và ghi dữ liệu ban đầu của \textit{Writer Process}}
+\end{figure}
+Trong giai đoạn khởi tạo, tiến trình \textbf{Writer} tạo (hoặc mở lại nếu đã tồn tại) tệp \texttt{shared\_data.txt}, thiết lập kích thước \textbf{4096 bytes}, và ánh xạ vùng nhớ của tệp này vào không gian địa chỉ tiến trình tại \texttt{0x7afc661a0000}. Sau đó, Writer ghi dữ liệu ban đầu gồm:
+\begin{itemize}
+    \item \textbf{Counter} = 100
+    \item \textbf{Message} = ``Hello from Writer Process!''
+     \item \textbf{Data array}: 0, 10, 20, 30, 40, 50, 60, 70, 80, 90
+    \item \textbf{Values array}: 3.14, 6.28, 9.42, 12.56, 15.70
+    \item \textbf{Status} = READY
+\end{itemize}
+Dữ liệu khởi tạo hợp lệ, trạng thái \texttt{READY} cho phép Reader truy cập. Tiến trình Writer tạm dừng 30 giây để chờ tiến trình Reader kết nối và đọc dữ liệu.
+
+\newpage
+\subsubsection{Reader Process – Kết nối và đọc dữ liệu đầu tiên}
+
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=0.9\textwidth]{image/4b.png}
+        \vspace{0.5cm}
+    \caption{Reader Process – Kết nối và đọc dữ liệu (vòng đọc 1)}
+\end{figure}
+
+Trong giai đoạn này (sau hơn 10s từ khi Writer Process khởi tạo) , tiến trình \textbf{Reader} mở cùng tệp \texttt{shared\_data.txt}, kiểm tra kích thước hợp lệ và ánh xạ vùng nhớ của tệp vào không gian địa chỉ của mình tại \texttt{0x7a629e71f000}. Sau khi tiến trình \textbf{Writer} thiết lập trạng thái \texttt{READY}, Reader bắt đầu truy cập và đọc toàn bộ dữ liệu khởi tạo, bao gồm:
+\begin{itemize}
+    \item \textbf{Counter} = 100
+    \item \textbf{Message} = ``Hello from Writer Process!''
+     \item \textbf{Data array}: 0, 10, 20, 30, 40, 50, 60, 70, 80, 90
+    \item \textbf{Values array}: 3.14, 6.28, 9.42, 12.56, 15.70
+\end{itemize}
+
+\noindent\textbf{Phân tích:}
+\begin{itemize}
+    \item Mặc dù vùng nhớ được ánh xạ tại địa chỉ khác nhau trong hai tiến trình, Reader vẫn truy cập chính xác cùng vùng dữ liệu vật lý do Writer tạo ra.
+    \item Toàn bộ dữ liệu được đọc ra hoàn toàn trùng khớp với nội dung mà Writer đã ghi, thể hiện tính toàn vẹn và ổn định của cơ chế chia sẻ bộ nhớ.
+    \item Kết quả chứng minh rằng cơ chế \texttt{memory mapping} bảo đảm sự nhất quán dữ liệu giữa các tiến trình độc lập, đồng thời loại bỏ nhu cầu trao đổi thông qua cơ chế I/O truyền thống.
+\end{itemize}
+
+
+\subsubsection{Reader Round 2}
+
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=0.8\textwidth]{image/4c.png}
+        \vspace{0.5cm}
+    \caption{Reader Round 2 – Dữ liệu ổn định trong thời gian chờ}
+\end{figure}
+Sau khoảng 10 giây (tương ứng với vòng đọc thứ hai), tiến trình \textbf{Reader} tiếp tục truy cập vùng nhớ chia sẻ và nhận được cùng một tập dữ liệu như trước:
+\begin{itemize}
+    \item \textbf{Counter} = 100, \textbf{Message} = ``Hello from Writer Process!''
+     \item \textbf{Data array}: 0, 10, 20, 30, 40, 50, 60, 70, 80, 90
+    \item \textbf{Values array}: 3.14, 6.28, 9.42, 12.56, 15.70
+    \item \textbf{Status} = READY
+    
+\end{itemize}
+
+Tại thời điểm này, tiến trình \textbf{Writer} vẫn đang trong giai đoạn tạm dừng 30 giây và chưa thực hiện bất kỳ thao tác ghi hoặc cập nhật nào lên vùng nhớ.
+
+\subsubsection{Writer Update Data}
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=0.8\textwidth]{image/4d.png}
+        \vspace{0.5cm}
+    \caption{Writer cập nhật dữ liệu sau 30s}
+\end{figure}
+Sau khi kết thúc khoảng thời gian chờ ban đầu (30 giây), tiến trình \textbf{Writer} tiến hành cập nhật nội dung trong vùng bộ nhớ dùng chung (\texttt{shared memory}) như sau:
+\begin{itemize}
+    \item \textbf{Counter}: 100 $\rightarrow$ 200
+    \item \textbf{Message}: ``Updated message!''
+    \item \textbf{Status}: \texttt{READY} $\rightarrow$ \texttt{UPDATED}
+\end{itemize}
+
+Sau khi ghi dữ liệu mới, Writer tiếp tục duy trì ánh xạ bộ nhớ thêm 15 giây để tiến trình \textbf{Reader} có thể phát hiện và đọc được sự thay đổi này.
+
+
+
+
+
+
+\subsubsection{Reader Round 3}
+
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=0.8\textwidth]{image/4e.png}
+        \vspace{0.5cm}
+    \caption{Reader Round 3 – Phát hiện thay đổi từ Writer}
+\end{figure}
+
+Trong vòng đọc thứ ba, tiến trình \textbf{Reader} phát hiện các giá trị trong vùng bộ nhớ chia sẻ đã được cập nhật:
+\begin{itemize}
+    \item \textbf{Counter}: 100 $\rightarrow$ 200
+    \item \textbf{Message}: ``Hello from Writer Process!'' $\rightarrow$ ``Updated message!''
+    \item \textbf{Status}: \texttt{READY} $\rightarrow$ \texttt{UPDATED}
+\end{itemize}
+
+Kết quả này chứng minh rằng Reader nhận được các thay đổi từ Writer theo thời gian thực, mặc dù hai tiến trình hoạt động độc lập.
+
+Đây là kết quả trọng tâm, minh chứng khả năng đồng bộ dữ liệu giữa các tiến trình. Reader có thể tự động nhận thấy dữ liệu mới mà không cần thao tác đọc lại tệp từ đĩa, thể hiện hiệu quả của bộ nhớ chia sẻ (\textit{shared memory}).
+
+
+
+
+
+\subsubsection{Reader Round 4}
+
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=0.8\textwidth]{image/4f.png}
+        \vspace{0.5cm}
+    \caption{Reader Round 4 – Xác nhận dữ liệu mới}
+\end{figure}
+Trong vòng đọc thứ tư, tiến trình \textbf{Reader} tiếp tục truy cập vùng bộ nhớ chia sẻ và nhận được các giá trị đã được cập nhật:
+\begin{itemize}
+    \item \textbf{Counter} = 200
+      \item \textbf{Message}: Updated message!
+    \item \textbf{Status} = UPDATED
+\end{itemize}
+
+Kết quả này xác nhận rằng các giá trị mới được duy trì ổn định trong vùng nhớ chia sẻ, không bị thay đổi hay mất mát.
+
+Dữ liệu trong \texttt{shared memory} được lưu trữ một cách nhất quán giữa các tiến trình, đảm bảo tính toàn vẹn dữ liệu. Không xảy ra hiện tượng mất dữ liệu hay rollback, minh chứng cơ chế \textit{memory mapping} duy trì trạng thái ổn định ngay cả khi Reader và Writer hoạt động độc lập.
+
+
+\subsubsection{Bidirectional Communication}
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=0.8\textwidth]{image/4g.png}
+        \vspace{0.5cm}
+    \caption{Bidirectional Communication – Reader ghi lại dữ liệu}
+\end{figure}
+Để minh chứng khả năng truyền thông hai chiều, tiến trình \textbf{Reader} thực hiện ghi ngược lại vào vùng bộ nhớ chia sẻ (\texttt{shared memory}) với các giá trị mới:
+\begin{itemize}
+    \item \textbf{Counter}: 200 $\rightarrow$ 1200
+    \item \textbf{Status}: \texttt{UPDATED} $\rightarrow$ \texttt{READ\_AND\_MODIFIED}
+\end{itemize}
+
+Sau khi thực hiện ghi dữ liệu, Reader thông báo cho Writer rằng nội dung đã được chỉnh sửa.
+
+\noindent\textbf{Giải thích:}
+\begin{itemize}
+    \item Reader có quyền ghi dữ liệu, không chỉ đơn thuần đọc, thể hiện khả năng tương tác hai chiều (\textit{bidirectional communication}) giữa các tiến trình.
+    \item Cơ chế này minh chứng rằng \texttt{shared memory} cho phép cả hai tiến trình trao đổi dữ liệu qua cùng một vùng nhớ vật lý mà không cần sử dụng thêm cơ chế IPC bổ sung.
+    \item Việc Writer nhận thông báo từ Reader xác nhận dữ liệu đã được chỉnh sửa cho thấy sự đồng bộ và quản lý trạng thái hiệu quả giữa các tiến trình.
+\end{itemize}
+
+
+\newpage
+
+\subsubsection{Writer nhận thay đổi từ Reader}
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=0.8\textwidth]{image/4h.png}
+        \vspace{0.5cm}
+    \caption{Writer nhận thay đổi từ Reader}
+\end{figure}
+Sau khi Reader ghi dữ liệu trở lại, tiến trình \textbf{Writer} kiểm tra vùng bộ nhớ chia sẻ và nhận thấy:
+\begin{itemize}
+    \item \textbf{Counter} = 1200 (thay vì 200)
+    \item \textbf{Status} = \texttt{READ\_AND\_MODIFIED}
+\end{itemize}
+
+Việc này xác nhận rằng Reader đã thực hiện ghi ngược dữ liệu thành công. Sau khi kiểm tra, Writer tiến hành \textbf{cleanup} để kết thúc thí nghiệm:
+\begin{itemize}
+    \item Hủy ánh xạ vùng nhớ (\texttt{unmap})
+    \item Đóng file \texttt{shared\_data.txt}
+    \item Xóa file khỏi hệ thống
+\end{itemize}
+
+\noindent\textbf{Giải thích:}
+\begin{itemize}
+    \item Writer quan sát được thay đổi do Reader thực hiện, chứng minh rằng giao tiếp hai chiều (\textit{bidirectional communication}) qua shared memory đã hoạt động thành công.
+    \item Quá trình cleanup đảm bảo giải phóng bộ nhớ và tài nguyên hệ thống một cách an toàn, tránh rò rỉ tài nguyên sau khi kết thúc thí nghiệm.
+\end{itemize}
+
+
+
+
+
+
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3} % tăng chiều cao dòng
+\setlength{\tabcolsep}{10pt} % tăng khoảng cách cột
+\caption{\textbf{Timeline tổng hợp quá trình giao tiếp giữa Writer và Reader}}
+\begin{tabular}{|c|l|p{9cm}|}
+\hline
+\rowcolor[gray]{0.85} \textbf{Thời điểm} & \textbf{Tiến trình} & \textbf{Sự kiện chính} \\ \hline
+0 s & Writer & Khởi tạo, tạo file, map memory và ghi Counter=100, Status=READY \\ \hline
+12 s & Reader & Vòng 1 – Đọc dữ liệu ban đầu (Counter=100) \\ \hline
+22 s & Reader & Vòng 2 – Dữ liệu chưa thay đổi \\ \hline
+30 s & Writer & Cập nhật dữ liệu: Counter=200, Message="Updated message!", Status=UPDATED \\ \hline
+32 s & Reader & Vòng 3 – Phát hiện thay đổi từ Writer \\ \hline
+42 s & Reader & Vòng 4 – Xác nhận dữ liệu mới (Counter=200) \\ \hline
+42 s & Reader & Ghi lại dữ liệu vào shared memory: Counter=1200, Status=READ\_AND\_MODIFIED \\ \hline
+45 s & Writer & Phát hiện dữ liệu do Reader ghi lại (Counter=1200) \\ \hline
+50 s & Writer & Cleanup: unmap memory, đóng file, xóa file shared\_data.txt \\ \hline
+\end{tabular}
+\end{table}
+
+
+
+
+
+
+
+\begin{figure}[!h]
+    \centering
+        \includegraphics[width=0.8\textwidth]{image/Ảnh chụp màn hình 2025-11-11 153338.png}
+        \vspace{0.5cm}
+    \caption{Kết quả tổng hợp}
+\end{figure}
+
+
+

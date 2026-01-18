@@ -1,0 +1,340 @@
+\documentclass[a4paper]{article}
+\ProvidesPackage{bkthesis}
+\usepackage{vntex}
+\usepackage{a4wide,amssymb,epsfig,latexsym,array,hhline,fancyhdr}
+
+\usepackage{pifont}
+\newcommand{\cmark}{\ding{51}} % dấu ✓
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{multirow}
+\usepackage{tabularx}
+
+\usepackage{booktabs}
+\usepackage{colortbl}
+\usepackage{xcolor}
+\usepackage[normalem]{ulem}
+%\usepackage{soul}
+\usepackage{setspace}
+\usepackage[makeroom]{cancel}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{multicol,longtable,amscd}
+\usepackage{diagbox}%Make diagonal lines in tables
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{alltt}
+\usepackage[framemethod=tikz]{mdframed}% For highlighting paragraph backgrounds
+\usepackage{caption,subcaption}
+\usepackage{enumitem}
+\usepackage{lastpage}
+\usepackage[lined,boxed,commentsnumbered]{algorithm2e}
+\usepackage{enumerate}
+\usepackage{color}
+\usepackage{graphicx}							% Standard graphics package
+\usepackage{array}
+\usepackage{tabularx, caption}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{rotating}
+\usepackage{graphics}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{epsfig}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{hyperref} % để tạo hyperlink
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage{lscape} % hoặc pdflscape nếu dùng pdf output
+\usetikzlibrary{arrows,snakes,backgrounds}
+\usepackage[unicode]{hyperref}
+\hypersetup{urlcolor=blue,linkcolor=black,citecolor=black,colorlinks=true} 
+%\usepackage{pstcol} 								% PSTricks with the standard color package
+\usepackage[utf8]{inputenc}        % Hỗ trợ Unicode
+\usepackage[T5]{fontenc}           % Font tiếng Việt
+\usepackage[vietnamese]{babel}     % Ngôn ngữ tiếng Việt
+\usepackage{listings}
+\usepackage{xcolor}
+
+\usepackage[most]{tcolorbox}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usetikzlibrary{calc}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\fontsize{10.5pt}{15pt}\selectfont,  % Cỡ chữ vừa phải
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                                    
+    numbersep=5pt,       
+    firstnumber=1,
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    frame=none
+}
+\lstset{style=mystyle}
+%
+
+\setlength{\parindent}{1.5em} % <-- thụt đầu dòng
+\setlength{\parskip}{0pt}     % <-- không thêm khoảng trắng giữa các đoạn
+
+
+
+
+
+
+\usepackage[normalem]{ulem}
+
+\newtheorem{theorem}{{\bf Định lý}}
+\newtheorem{property}{{\bf Tính chất}}
+\newtheorem{proposition}{{\bf Mệnh đề}}
+\newtheorem{corollary}[proposition]{{\bf Hệ quả}}
+\newtheorem{lemma}[proposition]{{\bf Bổ đề}}
+\theoremstyle{definition}
+\newtheorem{exer}{Bài toán}
+
+\def\thesislayout{	% A4: 210 × 297
+	\geometry{
+		a4paper,
+		total={160mm,240mm},
+		left=30mm,
+		top=30mm,
+	}
+}
+\thesislayout
+
+%\usepackage{fancyhdr}
+\setlength{\headheight}{40pt}
+\pagestyle{fancy}
+\fancyhead{} % clear all header fields
+\fancyhead[L]{
+ \begin{tabular}{rl}
+    \begin{picture}(25,15)(0,0)
+    \put(0,-8){\includegraphics[width=8mm, height=8mm]{image/hcmut.png}}
+    %\put(0,-8){\epsfig{width=10mm,figure=hcmut.eps}}
+   \end{picture}&
+	%\includegraphics[width=8mm, height=8mm]{hcmut.png} & %
+	\begin{tabular}{l}
+		\textbf{\bf \ttfamily TRƯỜNG ĐẠI HỌC BÁCH KHOA - ĐHQG TP.HCM (HCMUT)}\\
+		\textbf{\bf \ttfamily KHOA KHOA HỌC \& KỸ THUẬT MÁY TÍNH}
+	\end{tabular} 	
+ \end{tabular}
+}
+\fancyhead[R]{
+	\begin{tabular}{l}
+		\tiny \bf \\
+		\tiny \bf 
+	\end{tabular}  }
+\fancyfoot{} % clear all footer fields
+\fancyfoot[L]{\scriptsize \ttfamily HỆ ĐIỀU HÀNH (CO2017) \\Năm học 2025 - 2026 }
+
+\fancyfoot[R]{\scriptsize \ttfamily Trang {\thepage}/\pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.3pt}
+\renewcommand{\footrulewidth}{0.3pt}
+
+
+%%%
+\setcounter{secnumdepth}{4}
+\setcounter{tocdepth}{3}
+\makeatletter
+\newcounter {subsubsubsection}[subsubsection]
+\renewcommand\thesubsubsubsection{\thesubsubsection .\@alph\c@subsubsubsection}
+\newcommand\subsubsubsection{\@startsection{subsubsubsection}{4}{\z@}%
+                                     {-3.25ex\@plus -1ex \@minus -.2ex}%
+                                     {1.5ex \@plus .2ex}%
+                                     {\normalfont\normalsize\bfseries}}
+\newcommand*\l@subsubsubsection{\@dottedtocline{3}{10.0em}{4.1em}}
+\newcommand*{\subsubsubsectionmark}[1]{}
+\makeatother
+
+% \everymath{\color{blue}}
+%make in-line maths symbols blue to read/check easily
+
+
+\sloppy
+\captionsetup[figure]{labelfont={small,bf},textfont={small,it},belowskip=-1pt,aboveskip=-9pt}
+%space remove between caption, figure, and text
+\captionsetup[table]{labelfont={small,bf},textfont={small,it},belowskip=-1pt,aboveskip=7pt}
+%space remove between caption, table, and text
+
+%\floatplacement{figure}{H}%forced here float placement automatically for figures
+%\floatplacement{table}{H}%forced here float placement automatically for table
+%the following settings (11 lines) are to remove white space before or after the figures and tables
+%\setcounter{topnumber}{2}
+%\setcounter{bottomnumber}{2}
+%\setcounter{totalnumber}{4}
+%\renewcommand{\topfraction}{0.85}
+%\renewcommand{\bottomfraction}{0.85}
+%\renewcommand{\textfraction}{0.15}
+%\renewcommand{\floatpagefraction}{0.8}
+%\renewcommand{\textfraction}{0.1}
+\setlength{\floatsep}{5pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{5pt plus 2pt minus 2pt}
+\setlength{\intextsep}{10pt plus 2pt minus 2pt}
+
+\thesislayout
+
+\begin{document}
+\onehalfspacing
+\begin{titlepage}
+\begin{center}
+\textbf{ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH \\
+TRƯỜNG ĐẠI HỌC BÁCH KHOA \\
+KHOA KHOA HỌC \& KỸ THUẬT MÁY TÍNH }
+
+\end{center}
+
+\vspace{0.2cm}
+
+\begin{figure}[h!]
+\begin{center}
+\includegraphics[width=5cm]{image/hcmut.png}
+\end{center}
+\end{figure}
+
+
+\begin{center}
+    \bfseries\fontsize{16}{12}\selectfont
+     ĐỒ ÁN MÔN HỌC \\
+     THIẾT KẾ LUẬN LÍ (CO3091)
+     \vspace{0.3cm}
+    \rule{1.0\textwidth}{0.6pt} % gạch ngang mảnh
+    \vspace{0.3cm}
+    \textbf{\large \underline{ĐỀ TÀI 2:}} \\ 
+    \vspace{0.2cm}
+    \textbf{\fontsize{28}{12}\selectfont\bfseries \textcolor{red} {Smart Time Clock LCD} }
+    \vspace{0.5cm}
+    \rule{1.0\textwidth}{0.6pt}
+    
+\end{center}
+\vspace{0.2cm}
+
+
+\begin{center}
+    {\fontsize{15}{12}\selectfont\bfseries % 13pt size, 15pt line spacing
+     Lớp: L05 -- Học Kỳ HK251 \\
+    Ngày nộp: 25/12/2025 \par}
+    \vspace{1.3cm}
+    {\fontsize{14}{12}\selectfont\bfseries
+    GVHD: Thầy Nguyễn Thành Lộc}
+\end{center}
+
+% DANH SÁCH NHÓM
+\begin{center}
+\renewcommand{\arraystretch}{1.2} % tăng chiều cao hàng
+{\fontsize{13}{14}\selectfont % Cỡ chữ 12pt, khoảng cách dòng 14pt
+\begin{tabular}{|>{\centering\arraybackslash}p{7cm}|>{\centering\arraybackslash}p{4cm}|}
+\hline
+\textbf{Sinh viên thực hiện} & \textbf{Mã số sinh viên} \\
+\hline
+
+Trần Quang Vinh & 2313932   \\
+\hline
+Phạm Công Võ & 2313946 \\
+\hline
+\end{tabular}
+}
+\end{center}
+
+
+\vspace{3.5cm}
+\begin{center}
+{\footnotesize \hspace{1cm} \large Ho Chi Minh, Tháng 12/2025}
+\end{center}
+\end{titlepage}
+
+
+%\thispagestyle{empty}
+%%
+
+\newpage 
+\begin{center}
+    \textbf{\Large PHÂN CÔNG NHIỆM VỤ VÀ KẾT QUẢ THỰC HIỆN}\\[1ex]
+    \textbf{\Large ĐỀ TÀI CỦA TỪNG THÀNH VIÊN NHÓM }
+\end{center}
+
+\vspace{1em}
+
+\begin{longtable}{|c|m{3.5cm}|c|m{5cm}|c|c|}
+\hline
+\textbf{STT} & \textbf{Họ và tên} & \textbf{MSSV} & \textbf{Nhiệm vụ} & \textbf{Kết quả} & \textbf{Chữ ký} \\
+\hline
+1 & Trần Quang Vinh & 2313932  & \begin{itemize}
+    \item Hiện thực mã nguồn 
+    \item Viết báo cáo
+\end{itemize} & 100\% & \\
+\hline
+2 & Phạm Công Võ &  2313946 & \begin{itemize}
+    \item Hiện thực mã nguồn 
+    \item Viết báo cáo
+\end{itemize} & 100\% & \\
+\hline
+
+\end{longtable}
+
+\newpage
+
+
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+% -	Lời cảm ơn/ Lời ngỏ
+% -	Lời cảm ơn/ Lời ngỏ
+
+
+
+\input{content/intro}
+\input{content/theory}
+\input{content/app-design}
+\input{content/setup}
+\input{content/app-final}
+
+
+\newpage
+
+\addcontentsline{toc}{section}{\large Tài liệu tham khảo}
+\begin{thebibliography}{99}
+
+\bibitem{AdafruitDHT}
+Adafruit Industries. (2024). \textit{DHT sensor library} [Computer software]. GitHub. \url{https://github.com/adafruit/DHT-sensor-library}
+
+\bibitem{AdafruitRTClib}
+Adafruit Industries. (2024). \textit{RTClib: Arduino library for DS1307 and DS3231 RTCs} [Computer software]. GitHub. \url{https://github.com/adafruit/RTClib}
+
+\bibitem{AosongDHT11}
+Aosong Electronics. (2010). \textit{DHT11 humidity \& temperature sensor [Data sheet]}. \url{https://www.mouser.com/datasheet/2/758/DHT11-Technical-Data-Sheet-Translated-Version-1143054.pdf}
+
+\bibitem{ArkhipenkoTS}
+Arkhipenko, A. (2024). \textit{TaskScheduler: Cooperative multitasking for Arduino, ESPx, STM32, nRF and other microcontrollers} [Computer software]. GitHub. \url{https://github.com/arkhipenko/TaskScheduler}
+
+\bibitem{BarryFreeRTOS}
+Barry, R. (2016). \textit{Mastering the FreeRTOS real time kernel: A hands-on tutorial guide}. Real Time Engineers Ltd. \url{https://www.freertos.org/media/2018/161204_Mastering_the_FreeRTOS_Real_Time_Kernel-A_Hands-On_Tutorial_Guide.pdf}
+
+\bibitem{MaximDS3231}
+Maxim Integrated. (2015). \textit{DS3231: Extremely accurate I²C-integrated RTC/TCXO/crystal [Data sheet]}. \url{https://www.analog.com/media/en/technical-documentation/data-sheets/ds3231.pdf}
+
+\bibitem{NXP_I2C}
+NXP Semiconductors. (2014). \textit{I²C-bus specification and user manual} (Rev. 6). \url{https://www.nxp.com/docs/en/user-guide/UM10204.pdf}
+
+\bibitem{Sanap2025}
+Sanap, V. C., Nikam, S., Sail, V., Thorat, S., \& Vidhate, A. (2025). Design and implementation of real time clock using RTC DS3231 and Arduino Uno. \textit{International Journal for Research in Applied Science \& Engineering Technology, 13}(2), 3450--3458. \url{https://doi.org/10.22214/ijraset.2025.67162}
+
+\end{thebibliography}
+
+\end{document}

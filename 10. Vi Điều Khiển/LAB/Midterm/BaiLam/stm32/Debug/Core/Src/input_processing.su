@@ -1,0 +1,3 @@
+input_processing.c:32:6:fsm_for_input_processing	16	static
+input_processing.c:82:10:mapLedPin	16	static
+input_processing.c:113:6:displayClock	8	static

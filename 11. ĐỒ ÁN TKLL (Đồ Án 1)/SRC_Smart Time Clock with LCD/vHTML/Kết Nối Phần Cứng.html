@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ đồ Phần Cứng ESP32</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+
+        h2 {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 40px;
+            font-size: 1.3em;
+            font-weight: 400;
+        }
+
+        .diagram-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 40px 0;
+            position: relative;
+        }
+
+        .esp32-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            position: relative;
+            min-width: 500px;
+        }
+
+        .esp32-title {
+            text-align: center;
+            color: white;
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .connections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .connection-group {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .group-title {
+            color: white;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .pin-connection {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px 15px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .pin-connection:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .pin-label {
+            background: #fff;
+            color: #667eea;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            min-width: 80px;
+            text-align: center;
+            font-size: 0.95em;
+        }
+
+        .arrow {
+            color: #ffd700;
+            margin: 0 15px;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .device-name {
+            color: white;
+            font-weight: 500;
+            flex: 1;
+            font-size: 0.95em;
+        }
+
+        .power-section {
+            margin-top: 30px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .power-title {
+            color: white;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .power-connections {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .power-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .config-table {
+            margin-top: 50px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+        }
+
+        th {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.3s ease;
+        }
+
+        tbody tr:hover {
+            background: #f7fafc;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .pin-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .value-badge {
+            background: #48bb78;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .legend {
+            margin-top: 40px;
+            padding: 25px;
+            background: #f7fafc;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .legend-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .legend-item {
+            margin: 10px 0;
+            color: #4a5568;
+            font-size: 1em;
+            line-height: 1.6;
+        }
+
+        .legend-item strong {
+            color: #2d3748;
+        }
+
+        @media (max-width: 1024px) {
+            .connections {
+                grid-template-columns: 1fr;
+            }
+            
+            .esp32-box {
+                min-width: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            h2 {
+                font-size: 1.1em;
+            }
+
+            table {
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 Sơ Đồ Phần Cứng</h1>
+        <h2>Hệ Thống Đồng Hồ Thông Minh ESP32</h2>
+
+        <div class="diagram-container">
+            <div class="esp32-box">
+                <div class="esp32-title">ESP32-WROOM-32</div>
+                
+                <div class="connections">
+                    <!-- LED Matrix Group -->
+                    <div class="connection-group">
+                        <div class="group-title">🔴 LED Matrix MAX7219</div>
+                        <div class="pin-connection">
+                            <span class="pin-label">GPIO 13</span>
+                            <span class="arrow">→</span>
+                            <span class="device-name">DIN (MAX7219)</span>
+                        </div>
+                        <div class="pin-connection">
+                            <span class="pin-label">GPIO 14</span>
+                            <span class="arrow">→</span>
+                            <span class="device-name">CLK (MAX7219)</span>
+                        </div>
+                        <div class="pin-connection">
+                            <span class="pin-label">GPIO 12</span>
+                            <span class="arrow">→</span>
+                            <span class="device-name">CS (MAX7219)</span>
+                        </div>
+                    </div>
+
+                    <!-- I2C Devices Group -->
+                    <div class="connection-group">
+                        <div class="group-title">📟 Thiết Bị I2C</div>
+                        <div class="pin-connection">
+                            <span class="pin-label">GPIO 21</span>
+                            <span class="arrow">→</span>
+                            <span class="device-name">SDA (LCD & RTC)</span>
+                        </div>
+                        <div class="pin-connection">
+                            <span class="pin-label">GPIO 22</span>
+                            <span class="arrow">→</span>
+                            <span class="device-name">SCL (LCD & RTC)</span>
+                        </div>
+                        <div style="margin-left: 20px; margin-top: 10px; color: white; font-size: 0.9em;">
+                            <div>• LCD 16x2 (0x27)</div>
+                            <div>• RTC DS3231 (0x68)</div>
+                        </div>
+                    </div>
+
+                    <!-- Sensor Group -->
+                    <div class="connection-group">
+                        <div class="group-title">🌡️ Cảm Biến</div>
+                        <div class="pin-connection">
+                            <span class="pin-label">GPIO 27</span>
+                            <span class="arrow">→</span>
+                            <span class="device-name">DATA (DHT11)</span>
+                        </div>
+                    </div>
+
+                    <!-- Buttons Group -->
+                    <div class="connection-group">
+                        <div class="group-title">🎮 Nút Nhấn (Pull-up)</div>
+                        <div class="pin-connection">
+                            <span class="pin-label">GPIO 16</span>
+                            <span class="arrow">→</span>
+                            <span class="device-name">Button MODE</span>
+                        </div>
+                        <div class="pin-connection">
+                            <span class="pin-label">GPIO 17</span>
+                            <span class="arrow">→</span>
+                            <span class="device-name">Button SET</span>
+                        </div>
+                        <div class="pin-connection">
+                            <span class="pin-label">GPIO 5</span>
+                            <span class="arrow">→</span>
+                            <span class="device-name">Button INC</span>
+                        </div>
+                    </div>
+
+                    <!-- Output Devices Group -->
+                    <div class="connection-group">
+                        <div class="group-title">🔊 Thiết Bị Đầu Ra</div>
+                        <div class="pin-connection">
+                            <span class="pin-label">GPIO 32</span>
+                            <span class="arrow">→</span>
+                            <span class="device-name">Buzzer (Active)</span>
+                        </div>
+                        <div class="pin-connection">
+                            <span class="pin-label">GPIO 33</span>
+                            <span class="arrow">→</span>
+                            <span class="device-name">LED Indicator</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="power-section">
+                    <div class="power-title">⚡ Nguồn Điện</div>
+                    <div class="power-connections">
+                        <div class="power-item">3V3 → VCC (Tất cả module)</div>
+                        <div class="power-item">GND → GND (Tất cả module)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="config-table">
+            <h2 style="color: #2d3748; margin-bottom: 20px;">📋 Bảng Cấu Hình Chi Tiết</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Chân GPIO</th>
+                        <th>Chức Năng</th>
+                        <th>Thiết Bị</th>
+                        <th>Địa Chỉ/Thông Số</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="pin-badge">GPIO 13</span></td>
+                        <td>DIN (Data In)</td>
+                        <td>MAX7219 LED Matrix</td>
+                        <td>SPI Communication</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pin-badge">GPIO 14</span></td>
+                        <td>CLK (Clock)</td>
+                        <td>MAX7219 LED Matrix</td>
+                        <td>SPI Communication</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pin-badge">GPIO 12</span></td>
+                        <td>CS (Chip Select)</td>
+                        <td>MAX7219 LED Matrix</td>
+                        <td>SPI Communication</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pin-badge">GPIO 21</span></td>
+                        <td>SDA (Data)</td>
+                        <td>LCD 16x2 + RTC DS3231</td>
+                        <td>I2C: 0x27, 0x68</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pin-badge">GPIO 22</span></td>
+                        <td>SCL (Clock)</td>
+                        <td>LCD 16x2 + RTC DS3231</td>
+                        <td>I2C: 0x27, 0x68</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pin-badge">GPIO 27</span></td>
+                        <td>DATA (One-Wire)</td>
+                        <td>DHT11 Temperature Sensor</td>
+                        <td>Digital Pin</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pin-badge">GPIO 16</span></td>
+                        <td>Button Input</td>
+                        <td>MODE Button</td>
+                        <td>Pull-up Resistor</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pin-badge">GPIO 17</span></td>
+                        <td>Button Input</td>
+                        <td>SET Button</td>
+                        <td>Pull-up Resistor</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pin-badge">GPIO 5</span></td>
+                        <td>Button Input</td>
+                        <td>INC Button</td>
+                        <td>Pull-up Resistor</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pin-badge">GPIO 32</span></td>
+                        <td>Digital Output</td>
+                        <td>Active Buzzer</td>
+                        <td>Active High</td>
+                    </tr>
+                    <tr>
+                        <td><span class="pin-badge">GPIO 33</span></td>
+                        <td>Digital Output</td>
+                        <td>LED Indicator</td>
+                        <td>Active High</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="legend">
+            <div class="legend-title">📌 Thông Số Cấu Hình</div>
+            <div class="legend-item"><strong>Thời gian chống dội nút nhấn:</strong> <span class="value-badge">300ms</span></div>
+            <div class="legend-item"><strong>Độ sáng LED Matrix:</strong> <span class="value-badge">8/15</span></div>
+            <div class="legend-item"><strong>Tổng số chế độ hiển thị:</strong> <span class="value-badge">5 modes</span></div>
+            <div class="legend-item"><strong>LCD:</strong> 16 cột × 2 hàng, địa chỉ I2C 0x27</div>
+            <div class="legend-item"><strong>RTC DS3231:</strong> Địa chỉ I2C 0x68</div>
+            <div class="legend-item"><strong>Chế độ hiển thị:</strong> Nhiệt độ/Độ ẩm • Giờ/Ngày • Báo thức • Bấm giờ • Đếm ngược</div>
+        </div>
+    </div>
+</body>
+</html>

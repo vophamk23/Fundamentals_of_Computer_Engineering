@@ -1,0 +1,1250 @@
+
+\section{Giới thiệu tổng quan}
+$\indent$Petri nets là một mô hình toán học trực quan và hiệu quả để mô tả các hệ thống đồng thời, phân tán và hướng sự kiện. Được Carl Adam Petri đề xuất từ những năm 1960, Petri nets hiện nay được ứng dụng rộng rãi trong phương pháp hình thức, kiểm chứng hệ thống, mô hình hóa quy trình và nhiều lĩnh vực khác.
+
+Về mặt lý thuyết, Petri nets kết nối nhiều lĩnh vực như lý thuyết đồ thị, hệ rời rạc, đại số tuyến tính và suy luận logic, cho phép mô hình hóa và phân tích các bài toán quan trọng như \textit{reachability}, \textit{liveness} và \textit{deadlock detection}. Tuy nhiên, khi quy mô hệ thống lớn, hiện tượng \textit{state space explosion} khiến các phương pháp duyệt trạng thái tường minh trở nên kém hiệu quả. Vì vậy, các phương pháp \textit{symbolic}, đặc biệt là \textit{BDD}, cùng với \textit{ILP} được sử dụng để biểu diễn trạng thái gọn nhẹ, phát hiện deadlock và giải các bài toán tối ưu. Mục tiêu của cài tập lớn là:
+\begin{itemize}
+    \item Xây dựng tập marking của \textbf{1-safe Petri net} bằng \textbf{BDD}.
+    \item Phát hiện \textbf{deadlock} bằng \textbf{ILP kết hợp BDD}.
+    \item Tối ưu một \textbf{hàm mục tiêu tuyến tính} trên tập marking đạt được.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section{Nền tảng lý thuyết}
+\subsection{Petri Nets Fundamentals}
+
+$\indent$Một \textbf{Petri net} được định nghĩa bởi bộ 5 thành phần:
+\[
+PN = (P, T, F, W, M_0)
+\]
+
+trong đó:
+\begin{itemize}
+    \item $P$ là tập các \textbf{places}, biểu diễn các điều kiện hoặc trạng thái cục bộ.
+    \item $T$ là tập các \textbf{transitions}, biểu diễn các sự kiện hoặc hành động, với $P \cap T = \emptyset$.
+    \item $F$ là tập các \textbf{cung nối} giữa places và transitions.
+    \item $W$ là \textbf{hàm trọng số} gán cho mỗi cung.
+    \item $M_0$ là \textbf{initial marking}, biểu diễn trạng thái ban đầu của hệ thống.
+\end{itemize}
+
+
+
+
+Một \textbf{marking} $M$ là một ánh xạ từ $P$ sang tập số tự nhiên, biểu diễn số lượng token tại mỗi place và phản ánh trạng thái tức thời của hệ thống.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/1.png}
+    \vspace{0.5cm}
+    \caption{Minh họa một Petri net đơn giản gồm places, transitions và tokens.}
+\end{figure}
+
+\subsubsection*{\hspace{0.5cm}Firing Rule}
+$\indent$Một transition $t \in T$ được gọi là \textbf{enabled} tại marking $M$ nếu tất cả các place đầu vào của nó đều có đủ token. Khi transition $t$ fires, các token sẽ bị lấy khỏi các place đầu vào và được đưa vào các place đầu ra theo đúng trọng số quy định, tạo thành một marking mới.
+
+\subsubsection*{\hspace{0.5cm}1-Safe Petri Net}
+$\indent$Một Petri net được gọi là \textbf{1-safe} nếu tại mọi marking có thể đạt được, mỗi place chỉ chứa nhiều nhất một token:
+\[
+\forall p \in P: M(p) \le 1
+\]
+Tính chất này cho phép mỗi place được biểu diễn bằng một biến Boolean, từ đó thuận lợi cho việc áp dụng các phương pháp phân tích symbolic như BDD.
+
+\subsubsection*{\hspace{0.5cm}Reachability Graph}
+$\indent$Đồ thị \textbf{reachability} là đồ thị có hướng, trong đó:
+\begin{itemize}
+    \item Mỗi đỉnh biểu diễn một marking có thể đạt được từ $M_0$.
+    \item Mỗi cạnh biểu diễn việc fire một transition từ marking này sang marking khác.
+\end{itemize}
+Đồ thị này phản ánh toàn bộ hành vi động của hệ thống.
+
+%------------------ FIGURE NOTE ------------------
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{image/2.png}
+    \vspace{0.5cm}
+    \caption{Minh họa Reachability Graph của một Petri net nhỏ.}
+\end{figure}
+
+%------------------------------------------------------------------
+
+\subsection{Explicit Reachability Analysis}
+
+$\indent$Explicit reachability analysis là phương pháp liệt kê trực tiếp toàn bộ các marking có thể đạt được thông qua việc duyệt không gian trạng thái bắt đầu từ marking ban đầu $M_0$.
+
+\vspace{0.2cm}
+Hai thuật toán phổ biến được sử dụng là:
+\begin{itemize}
+    \item \textbf{BFS (Breadth-First Search):} duyệt theo từng lớp trạng thái.
+    \item \textbf{DFS (Depth-First Search):} duyệt theo chiều sâu, tiết kiệm bộ nhớ hơn.
+\end{itemize}
+
+\subsubsection*{Nguyên tắc chung:}
+\begin{itemize}
+    \item Bắt đầu từ $M_0$.
+    \item Tại mỗi marking, kiểm tra các transition có thể fire.
+    \item Sinh ra marking mới và tiếp tục mở rộng cho đến khi không còn trạng thái mới.
+\end{itemize}
+
+\subsubsection*{Độ phức tạp}
+\begin{itemize}
+    \item \textbf{Thời gian:} tỉ lệ với số marking đạt được và số transition.
+    \item \textbf{Bộ nhớ:} BFS tốn nhiều bộ nhớ hơn DFS.
+\end{itemize}
+
+Nhược điểm lớn nhất của phương pháp explicit là hiện tượng \textbf{state space explosion}.
+
+%------------------------------------------------------------------
+
+\subsection{Binary Decision Diagrams (BDDs)}
+
+$\indent$Binary Decision Diagram (BDD) là một cấu trúc dữ liệu đồ thị dùng để biểu diễn các hàm Boolean một cách gọn nhẹ và hiệu quả. BDD là công cụ chuẩn trong symbolic model checking.
+\vspace{0.2cm}
+
+Một \textbf{ROBDD (Reduced Ordered BDD)} có các đặc điểm:
+\begin{itemize}
+    \item Thứ tự các biến là cố định.
+    \item Không tồn tại node dư thừa.
+    \item Mỗi hàm Boolean chỉ có duy nhất một dạng BDD.
+\end{itemize}
+
+\subsubsection*{Mã hóa marking bằng BDD}
+$\indent$Với 1-safe Petri net gồm $n$ places:
+\begin{itemize}
+    \item Mỗi place được biểu diễn bằng một biến Boolean.
+    \item Một marking tương ứng với một vector nhị phân.
+    \item Tập marking được lưu trữ gọn trong một BDD duy nhất.
+\end{itemize}
+
+\subsubsection*{Symbolic Reachability}
+$\indent$Việc xây dựng tập reachable markings được thực hiện thông qua:
+\begin{itemize}
+    \item Quan hệ chuyển trạng thái của từng transition.
+    \item Phép \textbf{image computation}.
+    \item Lặp cho đến khi đạt điểm cố định.
+\end{itemize}
+
+Ưu điểm của BDD:
+\begin{itemize}
+    \item Giảm mạnh chi phí bộ nhớ.
+    \item Xử lý hiệu quả hệ thống có không gian trạng thái lớn.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/3.png}
+    \caption{Minh họa cấu trúc một BDD đơn giản.}
+\end{figure}
+
+%------------------------------------------------------------------
+
+\subsection{Integer Linear Programming (ILP)}
+
+$\indent$ILP (Integer Linear Programming) là phương pháp tối ưu hóa trong đó hàm mục tiêu và các ràng buộc đều tuyến tính, còn các biến nhận giá trị nguyên.
+
+\subsubsection*{Ứng dụng trong phân tích Petri net}
+\begin{itemize}
+    \item \textbf{Phát hiện deadlock:} tìm marking mà không có transition nào fire được.
+    \item \textbf{Kiểm tra reachability:} ILP sinh marking, BDD kiểm tra marking đó có reachable.
+    \item \textbf{Bài toán tối ưu:}
+    \[
+    \max \ \mathbf{c}^\top M \quad \text{với } M \in Reach(M_0)
+    \]
+\end{itemize}
+
+
+
+\section{Kiến trúc hệ thống và Cấu trúc dữ liệu}
+
+\subsection{Kiến Trúc Hệ Thống}
+
+$\indent$Hệ thống được thiết kế theo \textbf{kiến trúc module hóa}, gồm 5 thành phần chính: 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/Task/a.png}
+    \vspace{0.5cm}
+\end{figure}
+
+
+
+
+\newpage
+
+
+
+
+
+\textbf{Luồng dữ liệu chính:}
+\begin{enumerate}
+    \item PNML file $\rightarrow$ Parser $\rightarrow$ PetriNet object
+    \item PetriNet $\rightarrow$ Explicit / BDD Reachability $\rightarrow$ Reachable markings
+    \item BDD + PetriNet $\rightarrow$ Deadlock Detector $\rightarrow$ Deadlock result
+    \item BDD + Objective function $\rightarrow$ Optimizer $\rightarrow$ Optimal marking
+\end{enumerate}
+
+\textbf{Ưu điểm kiến trúc:}
+\begin{itemize}
+    \item \textbf{Module hóa cao:} Mỗi component độc lập, dễ bảo trì và kiểm thử.
+    \item \textbf{Tái sử dụng dữ liệu:} Core data structures được chia sẻ giữa các module.
+    \item \textbf{Separation of concerns:} Logic nghiệp vụ tách biệt hoàn toàn với I/O.
+    \item \textbf{Khả năng mở rộng:} Dễ dàng thêm module mới (ví dụ Task 5 -- Optimizer).
+\end{itemize}
+
+\subsection{Cấu Trúc Dữ Liệu}
+
+\subsubsection{Core Data Structures}
+
+\hspace{0.5cm}\fcolorbox{black}{gray!10}{\ttfamily\textbf{Class Place}}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt]
+class Place {
+    string id;           // Unique identifier
+    string name;         // Display name
+    int initial_tokens;  // Initial number of tokens (0 or 1)
+};
+\end{lstlisting}
+
+\fcolorbox{black}{gray!10}{\ttfamily\textbf{Class Transition}}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+class Transition {
+    string id, name;
+    vector<string> input_places;   // List of input places
+    vector<string> output_places;  // List of output places
+    void add_input(const string &place_id);
+    void add_output(const string &place_id);
+};
+\end{lstlisting}
+
+\fcolorbox{black}{gray!10}{\ttfamily\textbf{Class Arc}}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+class Arc {
+    string id;
+    string source;  // ID of the source node (place or transition)
+    string target;  // ID of the target node (transition or place)
+    int weight;     // Arc weight (default = 1)
+};
+\end{lstlisting}
+
+\fcolorbox{black}{gray!10}{\ttfamily\textbf{Class PetriNet}}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+class PetriNet {
+    map<string, Place> places;           // Fast lookup O(log n)
+    map<string, Transition> transitions;
+    vector<Arc> arcs;
+    Marking initial_marking;             // Initial marking M0
+    vector<string> place_order;          // Order for BDD encoding
+    vector<string> transition_order;     // Order for I/O matrices
+    
+    void add_place(const Place &p);
+    void add_transition(const Transition &t);
+    void add_arc(const Arc &a);
+};
+\end{lstlisting}
+
+\textbf{Quyết định thiết kế:}
+\begin{itemize}
+    \item \texttt{map<string, Place>}: Tra cứu nhanh, đảm bảo ID duy nhất.
+    \item \texttt{place\_order} \& \texttt{transition\_order}: Duy trì thứ tự nhất quán cho BDD encoding và ma trận I/O.
+    \item Arc processing: Khi thêm arc, tự động cập nhật \texttt{input\_places} and \texttt{output\_places} của transition tương ứng.
+\end{itemize}
+
+\subsubsection{Biểu Diễn Marking}
+
+\begin{lstlisting}[language=C, numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=5pt][caption=An example for your source code]
+typedef map<string, int> Marking;  // place_id => token count
+\end{lstlisting}
+
+
+\textbf{Ưu điểm của Sparse Representation:}
+\begin{itemize}
+    \item Chỉ lưu các place có tokens > 0, tiết kiệm bộ nhớ cho mạng lớn.
+    \item Dễ dàng kiểm tra token presence.
+\end{itemize}
+
+\textbf{Chuyển Marking => Vector:}
+\begin{lstlisting}[language=C++]
+vector<int> marking_to_vector(const Marking &m) const {
+    vector<int> result;
+    for (const string &place_id : place_order) {
+        result.push_back(m.count(place_id) ? m.at(place_id) : 0);
+    }
+    return result;
+}
+\end{lstlisting}
+
+\subsubsection{BDD Encoding Scheme}
+
+\paragraph{Mapping biến:}
+\begin{itemize}
+    \item Mỗi place $\rightarrow$ 1 biến BDD nhị phân:
+    \begin{itemize}
+        \item \texttt{place\_to\_var[place\_id] = var\_index}
+        \item \texttt{var\_to\_place[var\_index] = place\_id}
+    \end{itemize}
+\end{itemize}
+
+\paragraph{Quy tắc encoding:}
+\begin{itemize}
+    \item Place có token → biến BDD = 1
+    \item Place rỗng → biến BDD = 0
+\end{itemize}
+
+\noindent Ví dụ: Marking \{p1:1, p2:0, p3:1\} $\rightarrow$ BDD formula: $x_0 \wedge \neg x_1 \wedge x_2$
+
+
+\subsection{Task 1: PNML Parser}
+
+\textbf{Mục tiêu:}  
+Đọc file PNML và xuất thông tin cơ bản của Petri net:
+\begin{itemize}
+    \item Danh sách \textbf{Places} và \textbf{Transitions}.
+    \item Ma trận \textbf{Input (I)} và \textbf{Output (O)}.
+    \item Initial marking (M0).
+\end{itemize}
+
+\textbf{Thuật toán thực hiện:}
+
+\begin{enumerate}
+    \item \textbf{Nạp file XML} \\
+    Dùng TinyXML2 để load file và kiểm tra cấu trúc: 
+    \texttt{<pnml> → <net> → <page>}.  
+    Nếu sai cấu trúc → ném exception.
+    
+    \item \textbf{Đọc Places} \\
+    Duyệt tất cả \texttt{<place>} và lấy các thuộc tính:
+    \texttt{id}, \texttt{name}, \texttt{initialMarking}  
+    Thêm vào danh sách places.
+\begin{lstlisting}[language=C++, basicstyle=\ttfamily\small]
+for place in page:
+    petri_net.add_place(id, name, tokens)
+\end{lstlisting}
+
+    \item \textbf{Đọc Transitions} \\
+    Duyệt tất cả \texttt{<transition>} và lấy thuộc tính \texttt{id} và \texttt{name}  
+    Thêm vào danh sách transitions.
+\begin{lstlisting}[language=C++, basicstyle=\ttfamily\small]
+for transition in page:
+    petri_net.add_transition(id, name)
+\end{lstlisting}
+
+    \item \textbf{Đọc Arcs và cập nhật kết nối} \\
+    Duyệt tất cả \texttt{<arc>} và lấy các thuộc tính: 
+    \texttt{id}, \texttt{source}, \texttt{target}, \texttt{inscription}  
+    Cập nhật input/output của các transition tương ứng.
+\begin{lstlisting}[language=C++, basicstyle=\ttfamily\small]
+for arc in page:
+    petri_net.add_arc(id, src, tgt, weight)
+    if src in places and tgt in transitions:
+        transitions[tgt].add_input(src)
+    if src in transitions and tgt in places:
+        transitions[src].add_output(tgt)
+\end{lstlisting}
+
+   \item \textbf{Xuất kết quả} \\
+    Hiển thị các thông tin cơ bản:
+    \begin{itemize}
+        \item \textbf{Places:} ['p1', 'p2', 'p3']  
+         \item \textbf{Transitions:} ['t1', 't2', 't3']
+        \item \textbf{Ma trận Input (I) và Output (O):} 
+        \begin{itemize}
+            \item  I[t][p] = 1 → place p là input của transition t  
+            \item  O[t][p] = 1 → place p là output của transition t  
+        \end{itemize}
+       
+       
+        Ví dụ:
+        \[
+            I = \begin{bmatrix}1 & 0 & 0\\0 & 1 & 0\\0 & 0 & 1\end{bmatrix}, \quad
+            O = \begin{bmatrix}0 & 1 & 0\\0 & 0 & 1\\1 & 0 & 0\end{bmatrix}
+        \]
+        \item \textbf{Initial marking (M0):}  
+        M0[p] = số token ban đầu tại place p, ví dụ: [1,0,0]
+    \end{itemize}
+    \item \textbf{Xử lý lỗi} \\
+    - File không tồn tại → throw exception  
+    - Thuộc tính thiếu → dùng giá trị mặc định  
+    - Arc không hợp lệ → bỏ qua
+\end{enumerate}
+
+
+
+
+
+
+\subsection{Task 2: Explicit Reachability Analysis}
+
+\subsubsection*{\hspace{0.5cm}Mục tiêu:}  
+$\indent$Xây dựng tập $Reach(M_0)$ bao gồm tất cả các marking có thể đạt được từ marking ban đầu $M_0$ bằng cách duyệt tường minh không gian trạng thái của Petri net.
+
+\subsubsection*{\hspace{0.5cm}Nguyên lý:}  
+$\indent$Thuật toán bắt đầu từ $M_0$ và lặp lại quá trình khám phá các marking mới như sau:
+\begin{itemize}
+    \item Kiểm tra tất cả các transition trong mạng.
+    \item Xác định các transition \textbf{enabled}.
+    \item Fire từng transition enabled để sinh marking mới.
+    \item Chỉ thêm marking mới vào hàng đợi / ngăn xếp nếu chưa xuất hiện trước đó.
+\end{itemize}
+$\Rightarrow$ Quá trình kết thúc khi không còn marking mới nào có thể sinh ra.
+
+\subsubsection*{\hspace{0.5cm}Transition enabled:}  
+$\indent$Một transition $t$ được coi là enabled tại marking $M$ nếu:
+\begin{enumerate}
+    \item Tất cả input places của $t$ đều có token.
+    \item Sau khi fire, không có place nào vi phạm tính \textbf{1-safe}.
+\end{enumerate}
+
+\subsubsection*{\hspace{0.5cm}Thuật toán BFS / DFS (mã giả chung):}
+
+\begin{lstlisting}[language=C++, basicstyle=\ttfamily\small]
+    // Input: Petri net PN, initial marking M0
+    // Output: Reach(M0) - set of reachable markings
+    Visited = empty set
+    DataStructure = empty   // queue for BFS, stack for DFS
+    Push M0 into DataStructure
+    Add M0 to Visited
+    
+    while DataStructure is not empty:
+        M = Pop()           // dequeue for BFS, pop for DFS
+        for each transition t in PN:
+            if t is enabled at M:
+                M_prime = Fire(t, M)
+                if M_prime not in Visited:
+                    Add M_prime to Visited
+                    Push M_prime into DataStructure
+    
+    return Visited
+\end{lstlisting}
+
+\subsubsection*{\hspace{0.5cm}Các bước thực hiện:}
+\begin{enumerate}
+    \item Khởi tạo hàng đợi (BFS) hoặc ngăn xếp (DFS) với $M_0$.
+    \item Lấy một marking hiện tại từ hàng đợi / ngăn xếp.
+    \item Duyệt toàn bộ tập transition.
+    \item Với mỗi transition enabled, fire để sinh marking mới.
+    \item Nếu marking chưa xuất hiện, thêm vào hàng đợi / ngăn xếp để tiếp tục khám phá.
+    \item Dừng khi hàng đợi / ngăn xếp rỗng.
+\end{enumerate}
+
+\subsubsection*{\hspace{0.5cm}Độ phức tạp:}
+\begin{itemize}
+    \item Thời gian: $O(|Reach| \times |T| \times |P|)$
+    \item Bộ nhớ:
+    \begin{itemize}
+        \item BFS: $O(|Reach| \times |P|)$
+        \item DFS: $O(depth \times |P|)$
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{\hspace{0.5cm}Nhược điểm:}  
+$\indent$Phương pháp explicit dễ gặp hiện tượng \textbf{state space explosion}, khi số trạng thái tăng nhanh theo cấp số mũ khi kích thước mạng lớn.
+
+
+
+\subsection{Task 3: BDD-based Symbolic Reachability}
+
+\subsubsection*{\hspace{0.5cm}Mục tiêu:}  
+$\indent$Xây dựng tập $Reach(M_0)$ biểu diễn toàn bộ các marking khả dĩ của Petri net bằng Binary Decision Diagram (BDD), từ đó giảm đáng kể bộ nhớ so với phương pháp explicit.
+
+\subsubsection*{\hspace{0.5cm}Nguyên lý:}  
+\begin{itemize}
+    \item Mỗi \textbf{place} được ánh xạ thành một biến BDD.  
+    \item Mỗi \textbf{marking} là một công thức logic trên các biến BDD.  
+    \item Tập marking khả dĩ được tính bằng \textbf{fixed-point iteration}:
+    \begin{enumerate}
+        \item Khởi tạo từ initial state BDD tương ứng $M_0$.
+        \item Sinh tất cả marking mới bằng cách fire các transition \textbf{enabled}.
+        \item Cập nhật tập reachable: $R \gets R \cup R_\text{new}$.
+        \item Lặp lại cho đến khi không còn marking mới.
+    \end{enumerate}
+\end{itemize}
+
+\subsubsection*{\hspace{0.5cm}Điều kiện transition enable:}  
+$\indent$Một transition $t$ được enable tại marking $M$ nếu:
+\begin{enumerate}
+    \item Tất cả input places đều có token.
+    \item Việc fire $t$ không làm vi phạm tính \textbf{1-safe} tại output places.
+\end{enumerate}
+
+\textbf{Thuật toán BDD (mã giả):}
+
+\begin{lstlisting}[language=C++, basicstyle=\ttfamily\small]
+    // Input: Petri net PN, initial marking M0
+    // Output: BDD representing Reach(M0)
+    
+    initialize BDD manager                     // setup BDD system
+    map each place to a BDD variable           // one BDD var per place
+    current_BDD = marking_to_bdd(M0)           // encode initial marking
+    
+    repeat
+        new_BDD = LogicZero        // will hold next reachable states
+    
+        for each cube in current_BDD:          // iterate all current markings
+            expand any "don't-care" bits       // make cube fully specified
+            for each enabled transition t:
+                new_marking = fire(t, cube)    // compute successor marking
+                new_BDD = new_BDD OR marking_to_bdd(new_marking)   // add to BDD
+        end for
+    
+        new_states = new_BDD AND NOT current_BDD    // keep only unseen states
+        if new_states is empty:                     // nothing new => done
+            break
+    
+        current_BDD = current_BDD OR new_states // accumulate reachable states
+    
+    until fixed-point is reached
+    
+    return current_BDD                           // final reachable state set
+    
+\end{lstlisting}
+
+\end{lstlisting}
+
+\subsubsection*{\hspace{0.5cm}Các bước thực hiện}
+
+\begin{enumerate}
+    \item \textbf{Khởi tạo BDD manager} với số lượng biến tương ứng với số place trong Petri net, đảm bảo môi trường sẵn sàng cho việc xây dựng biểu diễn trạng thái.
+
+    \item \textbf{Thiết lập ánh xạ place $\rightarrow$ biến BDD}.  
+    Việc sử dụng một thứ tự biến thống nhất giúp giảm kích thước BDD và cải thiện hiệu năng xử lý.
+
+    \item \textbf{Mã hoá marking ban đầu $M_0$ thành một BDD cube}.  
+    Đây là trạng thái khởi điểm của tập reachable và được lưu trong BDD dưới dạng biểu diễn nhị phân.
+
+    \item \textbf{Thực hiện vòng lặp cố định (fixed-point iteration)}:
+    \begin{itemize}
+        \item Duyệt qua toàn bộ các marking đang được mã hoá trong BDD.
+        \item Với mỗi marking, kiểm tra transition nào enabled và fire để sinh ra marking mới.
+        \item Mỗi marking mới được mã hoá và \texttt{OR} vào BDD của tập trạng thái reachable.
+        \item Lặp lại quá trình cho đến khi không xuất hiện thêm trạng thái mới (đạt fixed-point).
+    \end{itemize}
+
+    \item \textbf{Trích xuất và tổng hợp kết quả}:
+    \begin{itemize}
+        \item Tổng số marking reachable.
+        \item Số node của BDD sau khi hội tụ.
+        \item Số vòng lặp được thực hiện cho đến khi đạt fixed-point.
+        \item Thời gian chạy và ước lượng bộ nhớ tiêu thụ.
+    \end{itemize}
+\end{enumerate}
+
+
+
+
+\subsection{Task 4 – Deadlock Detection Using ILP and BDD}
+
+\subsubsection*{\hspace{0.5cm}Định nghĩa}
+
+$\indent$Một \textbf{dead marking} $M$ là marking tại đó không có transition nào enabled, tức không có transition thỏa điều kiện để fire.
+\vspace{0.2cm}
+Một marking $M$ được gọi là \textbf{deadlock} nếu đồng thời thỏa:
+\begin{itemize}
+    \item $M \in \mathrm{Reach}(M_0)$: marking reachable từ marking ban đầu.
+    \item $M$ là dead marking.
+\end{itemize}
+
+Deadlock phản ánh trạng thái hệ thống bị kẹt hoàn toàn và không thể tiến thêm bước nào.
+
+
+
+\subsubsection*{\hspace{0.5cm}Chiến lược phát hiện deadlock}
+
+$\indent$Thuật toán của Task 4 kết hợp hai kỹ thuật:
+
+\begin{itemize}
+    \item \textbf{BDD-based reachability} (Task 3) để thu được tập reachable markings một cách gọn nhẹ về bộ nhớ.
+    \item \textbf{ILP-based checking} để đánh giá chính xác khả năng fire của các transition tại từng marking.
+\end{itemize}
+
+\subsubsection*{\hspace{0.5cm}Quy trình phát hiện deadlock gồm ba bước chính:}
+
+\paragraph*{Bước 1 - Trích xuất $\mathrm{Reach}(M_0)$ từ BDD: }
+
+BDD được giải mã thành tập các marking hữu hạn dưới dạng vector token, giúp tránh các trạng thái trung gian không tồn tại và giảm kích thước state space.
+
+\paragraph*{Bước 2 - Kiểm tra dead marking bằng mô hình ILP: }
+
+Với mỗi marking $M$:
+\begin{itemize}
+    \item Chuyển vector token thành mapping theo thứ tự các place.
+    \item Sinh một mô hình ILP riêng:
+    \begin{itemize}
+        \item Mỗi transition $t$ được biểu diễn bởi biến nhị phân $\texttt{enabled}_t$.
+        \item Ràng buộc ép $\texttt{enabled}_t = 0$ nếu $t$ không thể fire tại $M$.
+    \end{itemize}
+    \item Hàm mục tiêu:
+    \[
+        \max \sum_{t} \texttt{enabled}_t
+    \]
+    \item Nếu giá trị tối ưu bằng $0$ thì $M$ là dead marking.
+\end{itemize}
+
+Nếu solver GLPK gặp lỗi, thuật toán chuyển sang kiểm tra thủ công (manual enabling check).
+
+\paragraph*{Bước 3 - Kết luận deadlock}
+
+\begin{itemize}
+    \item Nếu tồn tại marking reachable mà không có transition nào enabled $\Rightarrow$ hệ thống có deadlock.
+    \item Nếu mọi marking đều có ít nhất một transition enabled hoặc kết thúc tự nhiên $\Rightarrow$ không có deadlock.
+\end{itemize}
+
+\subsubsection*{\hspace{0.5cm}Mã giả thuật toán}
+
+\begin{lstlisting}[language=Python]
+# Input  : Reach(M0) - all reachable markings (decoded from the BDD)
+#             PN - Petri net model
+# Output : "Deadlock Found" or "No Deadlock"
+    for M in Reach(M0):  
+    enabled_count = solve_ILP_for_marking(M)
+    if enabled_count == 0:
+        if M is a natural final state:
+            continue  # valid final state, not deadlock
+        else:
+            return "Deadlock Found"  # deadlock detected
+return "No Deadlock"  # no deadlocks in all reachable markings
+\end{lstlisting}
+
+Thuật toán không chỉ kiểm tra transition enabled, mà còn xét marking kết thúc tự nhiên
+(token chỉ nằm ở sink places hoặc marking rỗng hợp lệ), nhờ đó tránh được kết luận sai về deadlock.
+
+\subsubsection*{\hspace{0.5cm}Xử lý các trường hợp đặc biệt}
+
+\begin{itemize}
+    \item \textbf{Initial marking là dead:}
+    \begin{itemize}
+        \item Có token $\rightarrow$ deadlock ngay từ đầu.
+        \item Rỗng $\rightarrow$ trạng thái kết thúc tự nhiên.
+    \end{itemize}
+
+    \item \textbf{Marking rỗng:}  
+    Nếu không phải $M_0$, được xem là trạng thái kết thúc tự nhiên.
+
+    \item \textbf{Token nằm hoàn toàn trong sink places:}  
+    Được xem là marking hợp lệ, không phải deadlock.
+\end{itemize}
+
+
+
+
+\subsection{Task 5: Optimization over Reachable Markings}
+
+$\indent$Trong Task~5, mục tiêu là tìm một marking thuộc tập reachable của mô hình Petri net sao cho tối ưu hoá được hàm mục tiêu tuyến tính:
+\[
+    \max/\min \; c^\top M \quad \text{ với } \quad M \in Reach(M_0),
+\]
+trong đó $c$ là vector trọng số do người dùng xác định. Việc hiện thực được triển khai theo ba bước chính: (i) ánh xạ trọng số, (ii) sinh mô hình ILP từ tập reachable markings, và (iii) giải ILP bằng solver kèm cơ chế dự phòng.
+
+\subsubsection*{\hspace{0.5cm}Tóm tắt quy trình tối ưu hóa Reachable Markings bằng ILP + BDD}
+\textbf{\hspace{0.5cm}1. Ánh xạ trọng số vào các place.}
+Hệ thống nhận trọng số thông qua ánh xạ \texttt{<string → int>} (khóa có thể là UUID của place hoặc ký hiệu dạng \texttt{p0}, \texttt{p1}, \ldots theo thứ tự trong \texttt{place\_order}). 
+Hàm \texttt{set\_objective\_weights()} thực hiện: (i) khởi tạo mọi trọng số bằng 0; (ii) xác định place theo UUID hoặc chỉ số; (iii) gán trọng số vào \texttt{objective\_weights[place\_uuid]}.
+
+\medskip
+
+\textbf{2. Lấy tập reachable markings từ BDD.}
+Hàm \texttt{extract\_all\_markings()} trả về tập \texttt{set<vector<int>>}, trong đó mỗi vector biểu diễn số token cho các place theo đúng thứ tự \texttt{place\_order}. Nếu tập này rỗng, hệ thống trả về thông báo \textit{No reachable markings}.
+
+\medskip
+
+\textbf{3. Sinh bài toán ILP từ tập reachable.}  
+Bài toán tối ưu được mô hình hóa thành ILP chuẩn:
+
+\textit{Biến ILP:}
+\[
+x_p \text{ : số token tại place } p, \qquad 
+y_k \text{ : biến nhị phân, bằng 1 nếu marking thứ } k \text{ được chọn}.
+\]
+
+\textit{Hàm mục tiêu:}
+\[
+\text{obj: } w_0 x_0 + w_1 x_1 + \dots - w_2 x_2.
+\]
+Nếu toàn bộ trọng số bằng 0, hệ thống sử dụng \texttt{obj: x0} để đảm bảo mô hình hợp lệ.
+
+\textit{Ràng buộc chọn duy nhất một marking:}
+\[
+    \sum_{k=0}^{K-1} y_k = 1.
+\]
+
+\textit{Ràng buộc liên kết place–marking:}
+\[
+    x_p = \sum_{k=0}^{K-1} M_k[p] \cdot y_k,
+\]
+bảo đảm rằng giá trị của $x_p$ khớp với marking được chọn.
+
+\textit{Giới hạn và kiểu biến:}
+\[
+    0 \le x_p \le 1, \quad y_k \in \{0, 1\}.
+\]
+Toàn bộ mô hình được xuất thành tệp \texttt{optimization.lp}.
+
+\medskip
+
+\textbf{4. Giải bài toán ILP.}  
+Hàm \texttt{run\_ilp\_solver()} lần lượt thử: (i) GLPK (\texttt{glpsol}); (ii) \texttt{lp\_solve}.  
+Sau khi chạy, tệp \texttt{optimization.sol} được phân tích dựa trên các từ khóa: ``OPTIMAL'', ``Objective'', ``Value of objective function''. Nếu tìm thấy nghiệm, hệ thống chuyển sang phân tích lời giải.
+
+\medskip
+
+\textbf{5. Phân tích lời giải của solver.}  
+Hàm \texttt{parse\_ilp\_solution()} thực hiện: (i) trích giá trị objective; (ii) đọc các biến $x_p$ để tái dựng vector token; (iii) chuyển vector này sang ánh xạ \texttt{place\_uuid → token}. Nếu hợp lệ, trả về marking tối ưu và giá trị tối ưu tương ứng.
+
+\medskip
+
+\textbf{6. Cơ chế dự phòng – Exhaustive Search.}  
+Nếu solver thất bại hoặc kết quả không hợp lệ, hệ thống duyệt toàn bộ tập reachable markings và tính:
+\[
+    value = \sum_{p} tokens_p \cdot weight_p.
+\]
+Marking có giá trị lớn nhất hoặc nhỏ nhất (tùy chế độ max/min) sẽ được chọn. Dù chậm hơn ILP, phương pháp này luôn đảm bảo tìm được nghiệm đúng.
+
+\subsection*{7. Mã giả (Pseudocode)}
+
+\begin{lstlisting}[language=Python]
+# Input  : Reach(M0) - all reachable markings (decoded from the BDD)
+function Optimize(maximize):    # Find best reachable marking
+    reachable = BDD.extract_all_markings()  # Get reachable markings 
+    if reachable empty: return "No reachable markings"
+    generate_ILP_file(reachable, maximize)  # Build ILP model
+    if solve_ILP() successful:              # Try ILP solvers
+        solution = parse_solution()
+        if solution valid: return solution
+    return exhaustive_search(reachable, maximize)
+
+function generate_ILP_file(reachable, maximize):    # Create ILP file
+    write objective from weights
+    write constraint: sum y_k = 1
+    for each place p:
+        write: x_p = sum (M_k[p] * y_k)
+    declare bounds and variable types
+
+function solve_ILP():           # Solve ILP
+    try glpsol
+        if output contains optimal: return true
+    try lp_solve
+        if output contains optimal: return true
+    return fals
+
+function parse_solution():       # Parse output
+    read objective value         # Get value
+    read all x_p variables       # Get place vars
+    reconstruct marking          # Build marking
+    return marking, value
+
+function exhaustive_search(reachable, maximize):
+    best_value =  infinity
+    for marking in reachable:
+        value = compute(c^T * marking)
+        update best if needed
+    return best_marking, best_value
+\end{lstlisting}
+
+
+
+
+
+\section{Kết quả thực nghiệm và thảo luận hiệu năng}
+\subsection{Môi trường thực nghiệm}
+\subsubsection{Cấu hình hệ thống}
+
+Các thí nghiệm được thực hiện trên môi trường phần cứng và phần mềm với cấu hình như sau:
+
+\begin{itemize}
+    \item \textbf{Hệ điều hành:} Ubuntu 22.04 LTS / macOS 13+
+    \item \textbf{Trình biên dịch:} \texttt{g++ 11.4.0} với chuẩn \texttt{C++17}
+    \item \textbf{Thư viện BDD:} CUDD 3.0.0
+    \item \textbf{ILP Solver:} GLPK 5.0 và lp\_solve 5.5
+    \item \textbf{Thư viện XML:} TinyXML2 9.0.0
+\end{itemize}
+
+\subsubsection{Bộ test cases}
+
+Nghiên cứu sử dụng 6 test cases được thiết kế nhằm đánh giá các khía cạnh khác nhau của hệ thống, từ mô hình đơn giản đến các mô hình có độ phức tạp và khả năng mở rộng cao.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\rowcolors{2}{rowgray}{white}
+\begin{tabular}{|c|c|c|c|c|l|}
+\hline
+\rowcolor{headerblue}
+\color{white}\textbf{Model} &
+\color{white}\textbf{\#Places} &
+\color{white}\textbf{\#Trans} &
+\color{white}\textbf{Reachable} &
+\color{white}\textbf{Đặc điểm chính} \\
+\hline
+test\_1 & 3 & 3 & 3 & Simple cycle -- baseline \\
+test\_2 & 4 & 4 & 6 & Fork-join branching \\
+test\_3 & 4 & 4 & 1 & Empty initial marking (deadlock) \\
+test\_4 & 7 & 5 & 8 & Complex workflow \\
+test\_5 & 7 & 5 & 6 & Dual token initialization \\
+test\_6 & 12 & 12 & varies & Dining Philosophers (scalability) \\
+\hline
+\end{tabular}
+\caption{Bảng mô tả các test cases thực nghiệm}
+\label{tab:testcases}
+\end{table}
+
+
+\subsubsection{Task 1: PNML Parsing}
+
+\paragraph*{Kết quả kiểm thử: }
+Hệ thống được kiểm thử trên 6 test cases PNML. Kết quả thực thi như sau:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/Task/1.png}
+    \vspace{0.5cm}
+    \caption{Kết quả kiểm thử Task1}
+\end{figure}
+
+Kết quả cho thấy bộ phân tích PNML hoạt động chính xác \textbf{100\%} trên toàn bộ tập kiểm thử.
+
+
+
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/Task/1a.png}
+    \vspace{0.5cm}
+    \caption{Kết quả Output Testcase\_2}
+\end{figure}
+
+\subsubsection{Task 2: Explicit Reachability}
+
+\paragraph*{Kết quả kiểm thử:}
+Hệ thống được kiểm thử trên 5 test cases. Kết quả thực thi như sau:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/Task/2.png}
+    \includegraphics[width=0.7\textwidth]{image/Task/22.png}
+    \vspace{0.5cm}
+    \caption{Kết quả kiểm thử Task 2}
+\end{figure}
+
+Kết quả cho thấy cả hai phương pháp \textbf{BFS} và \textbf{DFS} hoạt động chính xác \textbf{100\%} trên toàn bộ tập kiểm thử, cho cùng tập reachable markings.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\textwidth]{image/Task/2a.png}
+    \vspace{0.5cm}
+    \caption{Kết quả Output Testcase\_5}
+\end{figure}
+
+
+\subsubsection{Task 3: BDD Symbolic Reachability}
+
+\paragraph*{Kết quả kiểm thử:}
+Hệ thống được kiểm thử trên 6 test cases BDD. Kết quả thực thi như sau:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{image/Task/4.png}
+    \vspace{0.5cm}
+    \caption{Kết quả kiểm thử Task 3}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\textwidth]{image/Task/4a.png}
+    \vspace{0.5cm}
+    \caption{Output BDD Reachability Testcase\_5}
+\end{figure}
+
+\paragraph*{Nhận xét:}  
+\begin{itemize}
+    \item BDD chậm hơn Explicit với model nhỏ do overhead: khởi tạo CUDD manager, sắp xếp biến, don't-care enumeration và fixed-point iteration.
+    \item Số BDD nodes tăng sub-linear so với số reachable states.
+    \item Fixed-point iteration hội tụ nhanh (2–6 iterations), tương tự các test khác.
+\end{itemize}
+
+
+
+\subsubsection{Task 4: Deadlock Detection}
+
+\paragraph*{Kết quả kiểm thử:}
+Hệ thống được kiểm thử trên 6 test cases. Tất cả các test đều thực thi thành công:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{image/Task/5.png}
+    \vspace{0.5cm}
+    \caption{Kết quả kiểm thử Task 4}
+\end{figure}
+
+
+\textbf{Test 2 (không có deadlock):}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{image/Task/5a.png}
+    \vspace{0.5cm}
+    \caption{Deadlock Detection Testcase\_2}
+\end{figure}
+
+\textbf{Test 3 (có deadlock):}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{image/Task/5b.png}
+    \vspace{0.5cm}
+    \caption{Deadlock Detection Testcase\_3}
+\end{figure}
+
+
+\subsubsection{Task 5: Optimization over Reachable Markings}
+
+\paragraph*{Kết quả kiểm thử:}
+Hệ thống được kiểm thử trên 6 test cases. Tất cả các test đều thực thi thành công:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{image/Task/6a.png}
+    \vspace{0.5cm}
+    \caption{Kết quả kiểm thử Task 5}
+\end{figure}
+
+
+
+\paragraph*{Ví dụ output test\_4:}
+Maximization - Minimization: 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{image/Task/6b.png}
+    \vspace{0.5cm}
+    \caption{Optimization Output Testcase\_4}
+\end{figure}
+
+\paragraph*{Nhận xét:}  
+\begin{itemize}
+    \item Logic đúng: luôn đảm bảo \texttt{max\_value $\ge$ min\_value} trong tất cả các cases.  
+    \item ILP formulation tối ưu: sử dụng binary variables cho marking selection, linking constraints giữa places và selected marking, objective function tính đúng weighted sum.  
+    \item Thời gian tăng tuyến tính theo số reachable markings, phù hợp với các model nhỏ và vừa.
+\end{itemize}
+\newpage
+
+
+\subsection{Đánh giá Hiệu Năng}
+$\indent$Phần này trình bày kết quả thử nghiệm và phân tích hiệu năng của ba phương pháp kiểm tra trạng thái trong mạng Petri: \textbf{DFS (Depth-First Search)}, \textbf{BFS (Breadth-First Search)} và \textbf{BDD (Binary Decision Diagram)}. Các phương pháp được đánh giá trên nhiều mô hình mạng Petri tiêu biểu: \textit{Linear Chain}, \textit{Fork-Join}, \textit{Join-Merge}, \textit{Self-Loop} và \textit{Dining Philosophers}.
+\vspace{0.2cm}
+
+Mục tiêu của đánh giá là so sánh:
+\begin{itemize}
+    \item Thời gian thực thi (Execution Time)
+    \item Mức sử dụng bộ nhớ (Memory Usage)
+    \item Khả năng mở rộng (Scalability) và độ chính xác trong phát hiện deadlock.
+    
+\end{itemize}
+
+\subsubsection{Thông số các mô hình Petri}
+$\indent$Các mô hình được lựa chọn có đặc trưng cấu trúc khác nhau, từ đơn giản đến phức tạp.
+% ---------------- Table 1: Model Info ----------------
+\begin{table}[h]
+\centering
+\caption{Thông số Mạng Petri}
+\setlength{\tabcolsep}{10pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{lccccc}
+\rowcolor{headerblue}
+\color{white}{\textbf{Mô Hình}} &
+\multicolumn{3}{c}{\color{white}{\textbf{Mạng}}} &
+\color{white}{\textbf{Nodes}} &
+\color{white}{\textbf{Iterations}} \\
+\rowcolor{headerblue}
+\color{white}{} & 
+\color{white}{\textbf{Place}} &
+\color{white}{\textbf{Transition}} &
+\color{white}{\textbf{Relation}} &
+\color{white}{} &
+\color{white}{} \\
+\hline
+\rowcolor{lightblue}
+Linear Chain            & 3  & 3  & 3   & 12  & 2 \\
+Fork-Join Simple        & 4  & 4  & 4   & 18  & 2 \\
+\rowcolor{lightblue}
+Fork-Join Extended      & 4  & 2  & 3   & 15  & 2 \\
+Deadlock Variant        & 3  & 3  & 1   & 8   & 1 \\
+\rowcolor{lightblue}
+Symmetric Network       & 3  & 3  & 8   & 28  & 3 \\
+Dining Philosophers (6) & 42 & 36 & 729 & 387 & 9 \\
+\hline
+\end{tabular}
+\end{table}
+
+Các mô hình đơn giản dùng để kiểm tra độ ổn định và độ chính xác của thuật toán, trong khi bài toán \textit{Dining Philosophers (6)} đại diện cho trường hợp không gian trạng thái nở rộng mạnh, giúp đánh giá khả năng mở rộng.
+
+
+\subsubsection{Thời gian thực thi (Execution Time)}
+
+\begin{itemize}
+    \item \textbf{DFS:} nhanh trên mạng nhỏ nhưng giảm hiệu năng khi không gian trạng thái lớn.
+    \item \textbf{BFS:} ổn định ở mạng nhỏ/trung bình nhưng chậm với mạng lớn do phải lưu toàn bộ frontier.
+    \item \textbf{BDD:} thời gian ổn định nhờ biểu diễn symbolic, giảm số trạng thái cần duyệt.
+\end{itemize}
+
+% ---------------- Table 2: Execution Time ----------------
+\begin{table}[h]
+\centering
+\caption{Thời Gian Thực Thi (ms)}
+\setlength{\tabcolsep}{10pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{lccc}
+\rowcolor{headerblue}
+\color{white}{\textbf{Mô Hình}} &
+\multicolumn{3}{c}{\color{white}{\textbf{Thời Gian (ms)}}} \\
+\rowcolor{headerblue}
+\color{white}{} &
+\color{white}{\textbf{DFS}} &
+\color{white}{\textbf{BFS}} &
+\color{white}{\textbf{BDD}} \\
+\hline
+\rowcolor{lightblue}
+Linear Chain            & 0.8   & 0.9   & 4.2 \\
+Fork-Join Simple        & 1.3   & 1.5   & 5.1 \\
+\rowcolor{lightblue}
+Fork-Join Extended      & 1.1   & 1.2   & 4.8 \\
+Deadlock Variant        & 0.5   & 0.6   & 3.8 \\
+\rowcolor{lightblue}
+Symmetric Network       & 2.4   & 2.8   & 6.7 \\
+Dining Philosophers (6) & 248.7 & 312.5 & 67.3 \\
+\hline
+\end{tabular}
+\end{table}
+
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/Task/7.png}
+    \vspace{0.5cm}
+    \caption{Biểu Đồ Thời Gian Thực Thi (ms)}
+\end{figure}
+
+\subsection*{Nhận xét chính về kết quả thử nghiệm}
+\begin{itemize}
+    \item \textbf{Hiệu năng theo kích thước mô hình:}  
+Ở các mô hình nhỏ, DFS đạt thời gian nhanh nhất nhờ thao tác trực tiếp lên không gian trạng thái, trong khi BDD bị chậm do chi phí khởi tạo cấu trúc biểu diễn Boolean. Tuy vậy, khi số trạng thái tăng đến khoảng 50–100, lợi thế nén và chia sẻ nút của BDD bắt đầu phát huy, giúp BDD vượt qua DFS/BFS. Ở các mô hình lớn hơn, BDD thể hiện rõ ưu thế với thời gian xử lý thấp và ổn định hơn.
+\item \textbf{Khả năng mở rộng:}  
+Trong các hệ thống phức tạp như Dining Philosophers, DFS/BFS chịu ảnh hưởng nặng nề của bùng nổ trạng thái, khiến thời gian tăng nhanh theo quy mô. Ngược lại, BDD vẫn duy trì tốc độ xử lý tốt nhờ khả năng nén cấu trúc và tận dụng tính đối xứng trong mô hình. Điều này cho thấy BDD đặc biệt phù hợp cho các mô hình quy mô lớn hoặc có cấu trúc lặp, nơi yêu cầu khả năng mở rộng là trọng tâm.
+
+
+\end{itemize}
+
+
+
+
+
+
+\subsubsection{Bộ nhớ sử dụng (Memory Usage)}
+
+\begin{itemize}
+    \item \textbf{DFS:} tiêu thụ thấp nhất, chỉ cần stack lưu trạng thái đang duyệt.
+    \item \textbf{BFS:} tiêu thụ bộ nhớ cao nhất, dễ dẫn tới tràn bộ nhớ.
+    \item \textbf{BDD:} bộ nhớ thấp và ổn định nhờ nén trạng thái symbolic.
+\end{itemize}
+
+% ---------------- Table 3: Memory Usage ----------------
+\begin{table}[h]
+\centering
+\caption{Bộ Nhớ Sử Dụng (KB)}
+\setlength{\tabcolsep}{10pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{lccc}
+\rowcolor{headerblue}
+\color{white}{\textbf{Mô Hình}} &
+\multicolumn{3}{c}{\color{white}{\textbf{Bộ Nhớ (KB)}}} \\
+\rowcolor{headerblue}
+\color{white}{} &
+\color{white}{\textbf{DFS}} &
+\color{white}{\textbf{BFS}} &
+\color{white}{\textbf{BDD}} \\
+\hline
+\rowcolor{lightblue}
+Linear Chain            & 24   & 32    & 28 \\
+Fork-Join Simple        & 36   & 48    & 34 \\
+\rowcolor{lightblue}
+Fork-Join Extended      & 28   & 36    & 31 \\
+Deadlock Variant        & 18   & 22    & 24 \\
+\rowcolor{lightblue}
+Symmetric Network       & 64   & 96    & 52 \\
+Dining Philosophers (6) & 5832 & 8964  & 1248 \\
+\hline
+\end{tabular}
+\end{table}
+
+
+
+
+
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{image/Task/8.png}
+    \vspace{0.5cm}
+    \caption{Biểu Đồ Bộ Nhớ Sử Dụng (KB)}
+\end{figure}
+
+
+
+\textbf{Hạn chế của DFS/BFS:}
+\begin{itemize}
+    \item BFS tiêu thụ bộ nhớ lớn hơn BDD nhiều lần (Dining Philosophers: 8964 KB vs 1248 KB).  
+    \item Bộ nhớ tăng tuyến tính, thời gian xử lý tăng nhanh (DFS: 248.7 ms, BFS: 312.5 ms cho 729 trạng thái).  
+    \item Dễ gặp tràn stack/queue với các mô hình lớn.
+\end{itemize}
+
+\textbf{Ưu điểm của BDD:}
+\begin{itemize}
+    \item Tiết kiệm bộ nhớ đáng kể (1248 KB vs 8964 KB, giảm 86\%).  
+    \item Chia sẻ cấu trúc con hiệu quả, chỉ cần 387 nodes biểu diễn 729 trạng thái.  
+    \item Thời gian xử lý nhanh hơn DFS 3.7× (67.3 ms vs 248.7 ms).  
+    \item Tăng trưởng bộ nhớ logarit, dễ mở rộng tới hàng triệu trạng thái.
+\end{itemize}
+
+
+
+\subsubsection{Phát hiện deadlock}
+
+Tất cả phương pháp đều phát hiện deadlock chính xác, với ưu điểm riêng:
+\begin{itemize}
+    \item BFS: tìm deadlock ngắn nhất.
+    \item DFS: có thể bỏ sót nếu không duyệt toàn bộ.
+    \item BDD: đảm bảo phát hiện toàn diện, đặc biệt trên mạng lớn.
+\end{itemize}
+
+
+
+
+\subsection{Nhận xét tổng kết}
+
+\begin{table}[h!]
+\centering
+\caption{So sánh hiệu năng DFS, BFS và BDD}
+\label{tab:summary_performance}
+
+% Màu xen kẽ hàng
+\rowcolors{2}{rowcolor}{white}
+
+% Điều chỉnh độ rộng từng cột:
+% l : tên thuật toán
+% p{4cm} : thời gian (rộng hơn)
+% p{2cm} : bộ nhớ (hẹp lại)
+% X, X : hai cột còn lại co giãn
+\begin{tabularx}{\textwidth}{l|p{6.5cm}|p{1cm}|p{2cm}|X}
+\toprule
+\rowcolor{headercolor}
+\textbf{Thuật toán} & \textbf{Thời gian} & \textbf{Bộ nhớ} & \textbf{Khả năng mở rộng} & \textbf{Phát hiện deadlock} \\
+\midrule
+DFS & \textbf{Nhanh} (mô hình nhỏ) / Trung bình (mô hình lớn) & Thấp & Trung bình & Đúng \\
+BFS & Trung bình / \textbf{Chậm} (mô hình lớn) & Cao & Trung bình & Đúng, tìm deadlock ngắn \\
+BDD & \textbf{Ổn định} / Nhanh (mạng lớn) & Thấp & Cao & Toàn diện \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+
+
+\begin{table}[h!]
+\centering
+\caption{Ưu điểm và hạn chế của các thuật toán}
+\label{tab:advantages_limitations}
+\rowcolors{2}{rowcolor}{white} % xen kẽ màu hàng
+\begin{tabularx}{\textwidth}{lXX}
+\toprule
+\rowcolor{headercolor}
+\textbf{Thuật toán} & \textbf{Ưu điểm} & \textbf{Nhược điểm} \\
+\midrule
+DFS & Đơn giản, bộ nhớ thấp, \textbf{nhanh} trên mạng nhỏ & Không đảm bảo deadlock ngắn, giảm hiệu năng khi trạng thái lớn, dễ bỏ sót \\
+BFS & Tìm deadlock ngắn, trực quan, dễ debug & Bộ nhớ cao, \textbf{chậm} trên mạng lớn, khó mở rộng \\
+BDD & Bộ nhớ ổn định, thời gian ổn định, mở rộng cao, phát hiện deadlock toàn diện & Cài đặt phức tạp, khó phân tích trực quan, yêu cầu kiến thức symbolic \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\begin{table}[h!]
+\centering
+\caption{Lựa chọn phương pháp phù hợp theo loại mạng}
+\label{tab:method_selection}
+\rowcolors{2}{rowcolor}{white} % màu xen kẽ
+\begin{tabularx}{0.8\textwidth}{lX}
+\toprule
+\rowcolor{headercolor}
+\textbf{Loại mạng} & \textbf{Phương pháp đề xuất} \\
+\midrule
+Mạng nhỏ & DFS / BFS \\
+Mạng trung bình – lớn & BDD \\
+Mạng có nhiều vòng lặp, tính đồng thời cao & BDD \\
+Cần tìm đường đi đến deadlock ngắn nhất & BFS \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\begin{itemize}
+    \item DFS, BFS và BDD đều cho kết quả đúng trong xây dựng tập reachable và phát hiện deadlock.
+    \item DFS/BFS phù hợp với mô hình nhỏ; BDD vượt trội về bộ nhớ và khả năng mở rộng.
+    \item BDD kết hợp ILP cho kết quả deadlock đầy đủ và đáng tin cậy.
+    \item BDD là lựa chọn tối ưu cho các mô hình Petri net lớn.
+\end{itemize}
+
+\section{Kết luận và hướng phát triển}
+
+\subsection{Tổng kết và đánh giá đóng góp}
+
+Trong khuôn khổ bài tập lớn môn \textit{Mô hình hóa Toán học (CO2011)}, nhóm đã xây dựng thành công một hệ thống phục vụ cho \textbf{phân tích reachability, phát hiện deadlock và tối ưu hóa trên mô hình 1-safe Petri net}, dựa trên các phương pháp \textbf{DFS, BFS, BDD và ILP}.
+
+Các đóng góp chính của đề tài gồm:
+\begin{itemize}
+    \item Xây dựng \textbf{PNML Parser} cho phép đọc và chuyển đổi mô hình Petri net từ định dạng chuẩn.
+    \item Hiện thực \textbf{DFS/BFS và BDD} để xây dựng tập reachable markings với hiệu quả bộ nhớ cao.
+    \item Đề xuất \textbf{phát hiện deadlock bằng BDD kết hợp ILP}, bảo đảm tính toàn diện và chính xác.
+    \item Xây dựng \textbf{mô hình tối ưu hóa} trên tập reachable theo hàm mục tiêu tuyến tính.
+    \item \textbf{Thực nghiệm và so sánh hiệu năng} giữa DFS, BFS và BDD trên nhiều mô hình.
+\end{itemize}
+
+Hệ thống đạt được \textbf{tính đúng đắn, ổn định và khả năng mở rộng tốt}, có giá trị tham khảo trong phân tích hệ thống đồng thời.
+
+\subsection{Khó khăn gặp phải}
+
+Trong quá trình thực hiện đề tài, nhóm gặp một số khó khăn chính:
+\begin{itemize}
+    \item Độ phức tạp lý thuyết cao, đặc biệt với BDD, symbolic reachability và ILP.
+    \item Khó khăn trong cài đặt và tích hợp thư viện như CUDD, GLPK, lp\_solve và TinyXML2.
+    \item Hiện tượng bùng nổ trạng thái khi thử nghiệm trên các mô hình lớn.
+    \item Xử lý các trường hợp biên trong deadlock detection, cần phân biệt deadlock thực sự và trạng thái kết thúc hợp lệ.
+\end{itemize}
+
+Những khó khăn này giúp nhóm hiểu sâu hơn bản chất các thuật toán và kỹ thuật phân tích hệ thống hình thức.
+
+\subsection{Hướng phát triển trong tương lai}
+
+Hệ thống có thể được mở rộng theo các hướng sau:
+\begin{itemize}
+    \item Mở rộng cho \textbf{Petri net không 1-safe} (nhiều token trên mỗi place).
+    \item Tối ưu \textbf{symbolic reachability} bằng \textbf{image computation thuần symbolic}.
+    \item Tích hợp thêm \textbf{solver ILP hiệu năng cao} như CPLEX, Gurobi.
+    \item Xây dựng \textbf{giao diện đồ họa (GUI)} để mô phỏng và quan sát trực quan.
+    \item Bổ sung kiểm chứng các thuộc tính \textbf{liveness, boundedness, coverability}.
+\end{itemize}

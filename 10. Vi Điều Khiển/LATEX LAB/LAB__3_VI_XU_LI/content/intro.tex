@@ -1,0 +1,65 @@
+
+\section{\large\textbf{Tổng Quan Về Nén Dữ Liều Bằng SVD}
+
+\subsection{Định nghĩa và mục tiêu}
+
+Trong bối cảnh công nghệ thông tin phát triển nhanh chóng, dữ liệu được tạo ra với tốc độ chưa từng có: từ hình ảnh, âm thanh, video, văn bản, đến tín hiệu cảm biến trong hệ thống IoT, dữ liệu y tế, tài chính,... Tuy nhiên, không phải toàn bộ dữ liệu đều chứa thông tin quan trọng như nhau. Rất nhiều phần trong tập dữ liệu là dư thừa, trùng lặp, hoặc không mang lại giá trị thực sự. Do đó, việc \textbf{nén dữ liệu} trở thành một nhu cầu tất yếu nhằm tối ưu hóa lưu trữ và truyền tải.
+
+Nén dữ liệu bằng \textbf{SVD (Singular Value Decomposition)} là một kỹ thuật toán học cho phép trích xuất những thông tin cốt lõi nhất của dữ liệu, thông qua việc phân rã dữ liệu gốc thành các thành phần độc lập theo trật tự mức độ ảnh hưởng. Thay vì lưu trữ toàn bộ dữ liệu ban đầu, ta chỉ cần giữ lại một số ít thành phần quan trọng nhất — từ đó, xây dựng lại một phiên bản gần đúng nhưng nhẹ hơn rất nhiều so với dữ liệu gốc.
+
+Khác với những phương pháp nén dựa trên quy tắc hoặc thuật toán mã hóa (như JPEG, MP3, ZIP...), SVD tiếp cận bài toán theo hướng tuyến tính và cấu trúc ma trận, giúp giảm kích thước mà vẫn giữ được cấu trúc thông tin chính, đặc biệt phù hợp với ảnh, video, và dữ liệu dạng bảng.
+
+\subsection*{1.2. Lịch sử phát triển và vai trò}
+
+\subsubsection*{1.2.1. Lịch sử hình thành và phát triển}
+
+Nguồn gốc của SVD có thể được truy về các công trình toán học cuối thế kỷ 19, khi nhà toán học người Anh \textit{James Joseph Sylvester} và các đồng nghiệp bắt đầu nghiên cứu về phân rã ma trận. Tuy nhiên, phải đến năm 1936, hai nhà toán học \textit{Carl Eckart} và \textit{Gale Young} mới chính thức đưa ra lý thuyết đầy đủ về SVD và chứng minh rằng nó là công cụ tối ưu để xấp xỉ một ma trận bởi một ma trận có hạng thấp hơn.\\
+
+Đến những năm 1965–1970, các nhà toán học như \textit{Golub, Kahan}, và \textit{Reinsch} phát triển những thuật toán tính toán SVD hiệu quả trên máy tính. Chính bước đột phá này đã biến SVD từ một công cụ lý thuyết trở thành một kỹ thuật ứng dụng được trong thực tiễn.\\
+
+Từ cuối thế kỷ 20 đến nay, SVD đã được ứng dụng rộng rãi trong:
+\begin{itemize}[leftmargin=2em]
+    \item Xử lý tín hiệu và ảnh số,
+    \item Phân tích dữ liệu lớn (Big Data),
+    \item Trí tuệ nhân tạo và học máy,
+    \item Phân tích ngôn ngữ tự nhiên,
+    \item Hệ thống gợi ý cá nhân hóa,...
+\end{itemize}
+
+\subsubsection*{1.2.2. Vai trò trong thời đại dữ liệu số}
+
+Trong bối cảnh dữ liệu số ngày càng khổng lồ và đa dạng, SVD đóng vai trò then chốt trong việc:
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{Tối ưu hóa lưu trữ}: Giảm đáng kể dung lượng mà không làm mất đi giá trị thông tin.
+    \item \textbf{Tăng hiệu quả truyền tải}: Dữ liệu nhẹ hơn giúp tiết kiệm băng thông và tăng tốc độ truyền.
+    \item \textbf{Giảm chiều dữ liệu}: Góp phần làm đơn giản hóa mô hình học máy, tăng tốc độ xử lý.
+    \item \textbf{Khử nhiễu và làm mượt dữ liệu}: Giữ lại phần “cốt lõi” của dữ liệu, loại bỏ chi tiết nhiễu không cần thiết.
+\end{itemize}
+
+SVD không chỉ là công cụ nén, mà còn là một phương pháp giúp con người hiểu sâu hơn về cấu trúc tiềm ẩn trong dữ liệu.
+
+\subsection*{1.3. Một số phương pháp nén dữ liệu sử dụng SVD}
+
+Tùy vào loại dữ liệu và mục đích sử dụng, SVD có thể được áp dụng trong nhiều phương pháp nén khác nhau. Trong thực tiễn, có thể phân loại các phương pháp như:
+
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{Nén ảnh số}: Ứng dụng phổ biến nhất, giúp giảm kích thước ảnh mà vẫn giữ độ sắc nét nhất định.
+    \item \textbf{Giảm chiều dữ liệu trong học máy}: Dữ liệu lớn được rút gọn về số chiều thấp hơn nhưng vẫn bảo toàn thông tin chính.
+    \item \textbf{Nén ma trận dữ liệu đa chiều}: Dùng trong hệ thống gợi ý, phân tích dữ liệu lớn.
+    \item \textbf{Kết hợp với các kỹ thuật khác}: Như PCA, LSA trong xử lý văn bản, mạng nơ-ron trong học sâu.
+\end{itemize}
+
+Tuy mỗi phương pháp có cách triển khai riêng, nhưng tất cả đều dựa trên nguyên lý chung: giữ lại những thành phần quan trọng nhất sau khi phân rã dữ liệu bằng SVD.
+
+\subsection*{1.4. Ứng dụng thực tiễn}
+
+Phương pháp nén dữ liệu bằng SVD được ứng dụng rộng rãi trong nhiều lĩnh vực, từ công nghiệp đến nghiên cứu khoa học:
+
+\begin{itemize}[leftmargin=2em]
+    \item \textbf{Xử lý ảnh và video}: Giảm dung lượng ảnh kỹ thuật số, ảnh vệ tinh, ảnh y tế (X-quang, MRI) mà vẫn giữ chất lượng thị giác; giảm nhiễu và phục hồi ảnh bị hỏng.
+    \item \textbf{Phân tích văn bản và ngôn ngữ tự nhiên}: Tìm kiếm theo ngữ nghĩa, phân tích nội dung tài liệu, loại bỏ nhiễu ngữ nghĩa thông qua phương pháp LSA.
+    \item \textbf{Hệ thống khuyến nghị}: Phân tích hành vi người dùng để đề xuất sản phẩm, phim, nhạc – ứng dụng tại Netflix, YouTube, Amazon,...
+    \item \textbf{Trí tuệ nhân tạo và học máy}: Là bước tiền xử lý để giảm độ phức tạp của mô hình, tăng hiệu quả huấn luyện.
+    \item \textbf{Y sinh và khoa học dữ liệu}: Rút trích đặc trưng trong dữ liệu gen, phân tích ảnh sinh học, dự đoán bệnh dựa trên dữ liệu lớn.
+    \item \textbf{Viễn thông và cảm biến}: Truyền dữ liệu trong mạng cảm biến với độ trễ thấp, tiết kiệm năng lượng.
+\end{itemize}
